@@ -89,6 +89,7 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("commons-net:commons-net:3.9.0")
     implementation("org.apache.commons:commons-net:3.9.0")
 
     implementation("androidx.work:work-runtime-ktx:2.9.1")
