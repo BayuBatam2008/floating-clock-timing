@@ -1,0 +1,5 @@
+<resources>
+    <color name="seed">#3A7BD5</color>
+    <color name="floating_green">#3DDC84</color>
+    <color name="floating_warning">#FFB300</color>
+</resources>
