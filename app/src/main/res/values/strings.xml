@@ -37,6 +37,6 @@
     <string name="live_preview">Live preview</string>
     <string name="syncing">Syncing…</string>
     <string name="last_success">Last success</string>
-    <string name="invalid_time_format">Use format HH:mm:ss.SSS</string>
+    <string name="invalid_time_format">Enter a duration greater than zero</string>
     <string name="scheduled_time">Scheduled: %1$s</string>
 </resources>

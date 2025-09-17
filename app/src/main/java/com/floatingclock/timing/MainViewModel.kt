@@ -2,6 +2,10 @@ package com.floatingclock.timing
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewModelScope
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.data.PreferencesRepository
@@ -103,9 +107,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun isOverlayActive(): Boolean = floatingClockController.isOverlayActive()
 
     companion object {
-        val Factory = androidx.lifecycle.viewmodel.initializer {
-            val app = (this[androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application)
-            MainViewModel(app)
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val app = extras[AndroidViewModelFactory.APPLICATION_KEY] as? Application
+                    ?: throw IllegalStateException("Application is not available in extras")
+                return MainViewModel(app) as T
+            }
         }
     }
 }
