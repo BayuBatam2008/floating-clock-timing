@@ -11,18 +11,43 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
 
-class FloatingClockService : Service() {
+class FloatingClockService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
-    private val controller by lazy { AppDependencies.floatingClockController }
+    private val controller: FloatingClockController by lazy { AppDependencies.floatingClockController }
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private var composeView: ComposeView? = null
     private var layoutParams: WindowManager.LayoutParams? = null
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateController = SavedStateRegistryController.create(this)
+    override val viewModelStore: ViewModelStore = ViewModelStore()
+
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateController.savedStateRegistry
 
     override fun onCreate() {
         super.onCreate()
+        savedStateController.performAttach()
+        savedStateController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         createOverlay()
     }
 
@@ -30,6 +55,11 @@ class FloatingClockService : Service() {
         super.onDestroy()
         removeOverlay()
         controller.onServiceDestroyed()
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        savedStateController.performDetach()
+        viewModelStore.clear()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -62,7 +92,10 @@ class FloatingClockService : Service() {
         layoutParams = params
 
         val composeView = ComposeView(this).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            ViewTreeLifecycleOwner.set(this, this@FloatingClockService)
+            ViewTreeSavedStateRegistryOwner.set(this, this@FloatingClockService)
+            ViewTreeViewModelStoreOwner.set(this, this@FloatingClockService)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 FloatingClockTheme {
                     val state by controller.overlayState.collectAsState()
