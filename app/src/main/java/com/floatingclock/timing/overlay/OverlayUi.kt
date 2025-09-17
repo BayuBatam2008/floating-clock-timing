@@ -35,7 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -108,7 +108,7 @@ fun FloatingOverlaySurface(
             .widthIn(min = 220.dp)
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
-                    change.consume()
+                    change.consumeAllChanges()
                     onDrag(dragAmount.x, dragAmount.y)
                 }
             }
@@ -132,7 +132,10 @@ fun FloatingOverlaySurface(
                 Text(
                     text = timeText,
                     style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = (34.sp * style.fontScale).coerceAtLeast(20.sp),
+                        fontSize = run {
+                            val scaled = 34.sp * style.fontScale
+                            if (scaled < 20.sp) 20.sp else scaled
+                        },
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = accentColor,
