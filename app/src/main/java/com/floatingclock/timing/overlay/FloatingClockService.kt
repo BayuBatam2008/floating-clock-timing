@@ -11,6 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.ViewTreeLifecycleOwner
@@ -18,11 +21,14 @@ import androidx.lifecycle.ViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
 
 class FloatingClockService : LifecycleService(), SavedStateRegistryOwner, ViewModelStoreOwner {
+class FloatingClockService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
     private val controller: FloatingClockController by lazy { AppDependencies.floatingClockController }
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
@@ -33,11 +39,26 @@ class FloatingClockService : LifecycleService(), SavedStateRegistryOwner, ViewMo
 
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateController.savedStateRegistry
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateController = SavedStateRegistryController.create(this)
+    override val viewModelStore: ViewModelStore = ViewModelStore()
+    private val viewModelStore = ViewModelStore()
+
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateController.savedStateRegistry
+
+    override fun getViewModelStore(): ViewModelStore = viewModelStore
 
     override fun onCreate() {
         super.onCreate()
         savedStateController.performAttach()
         savedStateController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         createOverlay()
     }
 
@@ -45,6 +66,9 @@ class FloatingClockService : LifecycleService(), SavedStateRegistryOwner, ViewMo
         super.onDestroy()
         removeOverlay()
         controller.onServiceDestroyed()
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         savedStateController.performDetach()
         viewModelStore.clear()
     }
