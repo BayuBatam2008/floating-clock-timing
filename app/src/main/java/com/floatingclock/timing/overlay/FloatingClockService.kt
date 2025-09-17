@@ -21,6 +21,8 @@ import androidx.lifecycle.ViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
@@ -34,12 +36,15 @@ class FloatingClockService : Service(), LifecycleOwner, SavedStateRegistryOwner,
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateController = SavedStateRegistryController.create(this)
     override val viewModelStore: ViewModelStore = ViewModelStore()
+    private val viewModelStore = ViewModelStore()
 
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
 
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateController.savedStateRegistry
+
+    override fun getViewModelStore(): ViewModelStore = viewModelStore
 
     override fun onCreate() {
         super.onCreate()
