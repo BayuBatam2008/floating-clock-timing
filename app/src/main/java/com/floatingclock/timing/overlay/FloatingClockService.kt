@@ -19,6 +19,8 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.ViewTreeLifecycleOwner
 import androidx.lifecycle.ViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.ViewTreeSavedStateRegistryOwner
@@ -33,6 +35,7 @@ class FloatingClockService : Service(), LifecycleOwner, SavedStateRegistryOwner,
     private var layoutParams: WindowManager.LayoutParams? = null
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateController = SavedStateRegistryController.create(this)
+    override val viewModelStore: ViewModelStore = ViewModelStore()
     private val viewModelStore = ViewModelStore()
 
     override val lifecycle: Lifecycle
