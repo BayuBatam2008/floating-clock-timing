@@ -16,7 +16,7 @@ import com.floatingclock.timing.ui.theme.FloatingClockTheme
 
 class FloatingClockService : Service() {
 
-    private val controller by lazy { AppDependencies.floatingClockController }
+    private val controller: FloatingClockController by lazy { AppDependencies.floatingClockController }
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private var composeView: ComposeView? = null
     private var layoutParams: WindowManager.LayoutParams? = null

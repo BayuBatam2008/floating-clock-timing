@@ -2,6 +2,7 @@ package com.floatingclock.timing.data
 
 import android.app.Application
 import android.content.Context
+import com.floatingclock.timing.overlay.FloatingClockController
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
