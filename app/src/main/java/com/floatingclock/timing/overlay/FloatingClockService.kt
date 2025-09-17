@@ -1,6 +1,5 @@
 package com.floatingclock.timing.overlay
 
-import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
@@ -11,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -27,12 +27,18 @@ import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
 
+class FloatingClockService : LifecycleService(), SavedStateRegistryOwner, ViewModelStoreOwner {
 class FloatingClockService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
     private val controller: FloatingClockController by lazy { AppDependencies.floatingClockController }
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private var composeView: ComposeView? = null
     private var layoutParams: WindowManager.LayoutParams? = null
+    private val savedStateController = SavedStateRegistryController.create(this)
+    override val viewModelStore: ViewModelStore = ViewModelStore()
+
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateController.savedStateRegistry
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateController = SavedStateRegistryController.create(this)
     override val viewModelStore: ViewModelStore = ViewModelStore()
@@ -68,6 +74,7 @@ class FloatingClockService : Service(), LifecycleOwner, SavedStateRegistryOwner,
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         return START_STICKY
     }
 

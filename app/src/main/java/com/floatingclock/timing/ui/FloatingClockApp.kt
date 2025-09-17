@@ -629,6 +629,9 @@ private fun SyncTab(
                     value = customServer,
                     onValueChange = { customServer = it },
                     label = { Text(text = stringResource(id = R.string.custom_server_hint)) },
+                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(
+                        keyboardType = KeyboardType.Uri
+                    ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     modifier = Modifier.fillMaxWidth()
                 )
