@@ -82,7 +82,6 @@ class TimeSyncManager(
                 val elapsed = SystemClock.elapsedRealtime()
                 val networkNow = ntpResult.ntpTimeMillis
                 val offset = ntpResult.offsetMillis
-                val offset = networkNow - System.currentTimeMillis()
                 val lastSync = Instant.ofEpochMilli(networkNow)
                 _state.value = _state.value.copy(
                     isInitialized = true,

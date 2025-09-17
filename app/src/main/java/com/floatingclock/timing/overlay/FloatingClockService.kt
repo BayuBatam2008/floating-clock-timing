@@ -1,6 +1,5 @@
 package com.floatingclock.timing.overlay
 
-import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
@@ -11,18 +10,34 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
 
-class FloatingClockService : Service() {
+class FloatingClockService : LifecycleService(), SavedStateRegistryOwner, ViewModelStoreOwner {
 
-    private val controller by lazy { AppDependencies.floatingClockController }
+    private val controller: FloatingClockController by lazy { AppDependencies.floatingClockController }
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private var composeView: ComposeView? = null
     private var layoutParams: WindowManager.LayoutParams? = null
+    private val savedStateController = SavedStateRegistryController.create(this)
+    override val viewModelStore: ViewModelStore = ViewModelStore()
+
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateController.savedStateRegistry
 
     override fun onCreate() {
         super.onCreate()
+        savedStateController.performAttach()
+        savedStateController.performRestore(null)
         createOverlay()
     }
 
@@ -30,9 +45,12 @@ class FloatingClockService : Service() {
         super.onDestroy()
         removeOverlay()
         controller.onServiceDestroyed()
+        savedStateController.performDetach()
+        viewModelStore.clear()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         return START_STICKY
     }
 
@@ -62,7 +80,10 @@ class FloatingClockService : Service() {
         layoutParams = params
 
         val composeView = ComposeView(this).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            ViewTreeLifecycleOwner.set(this, this@FloatingClockService)
+            ViewTreeSavedStateRegistryOwner.set(this, this@FloatingClockService)
+            ViewTreeViewModelStoreOwner.set(this, this@FloatingClockService)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 FloatingClockTheme {
                     val state by controller.overlayState.collectAsState()
