@@ -4,6 +4,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("kotlin-parcelize")
 }
 
@@ -59,7 +60,7 @@ android {
 
     testOptions {
         managedDevices {
-            devices {
+            allDevices {
                 maybeCreate<ManagedVirtualDevice>("pixel6api34").apply {
                     device = "Pixel 6"
                     apiLevel = 34
