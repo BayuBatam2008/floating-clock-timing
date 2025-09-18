@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #
-# Copyright © 2015-2021 the original authors.
+# Copyright © 2015 the original authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -115,56 +115,6 @@ case "$( uname )" in                #(
 esac
 
 CLASSPATH="\\\"\\\""
-
-WRAPPER_JAR="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
-WRAPPER_BASE64="$WRAPPER_JAR.base64"
-
-ensure_wrapper_jar() {
-    if [ -f "$WRAPPER_JAR" ]; then
-        return 0
-    fi
-
-    if [ ! -f "$WRAPPER_BASE64" ]; then
-        die "ERROR: Gradle wrapper JAR not found at $WRAPPER_JAR and base64 fallback $WRAPPER_BASE64 is missing."
-    fi
-
-    if command -v base64 >/dev/null 2>&1; then
-        if base64 --decode "$WRAPPER_BASE64" > "$WRAPPER_JAR" 2>/dev/null; then
-            return 0
-        fi
-        if base64 -d "$WRAPPER_BASE64" > "$WRAPPER_JAR" 2>/dev/null; then
-            return 0
-        fi
-        rm -f "$WRAPPER_JAR"
-    fi
-
-    if command -v python3 >/dev/null 2>&1; then
-        if BASE64_FILE="$WRAPPER_BASE64" JAR_FILE="$WRAPPER_JAR" python3 <<'PY'
-import base64
-import os
-import pathlib
-import sys
-
-base64_file = pathlib.Path(os.environ["BASE64_FILE"])
-jar_file = pathlib.Path(os.environ["JAR_FILE"])
-try:
-    jar_file.write_bytes(base64.b64decode(base64_file.read_text()))
-except Exception:
-    if jar_file.exists():
-        jar_file.unlink()
-    sys.exit(1)
-PY
-        then
-            if [ -f "$WRAPPER_JAR" ]; then
-                return 0
-            fi
-        fi
-    fi
-
-    die "ERROR: Could not create Gradle wrapper JAR at $WRAPPER_JAR. Please install 'base64' or 'python3'."
-}
-
-ensure_wrapper_jar
 
 
 # Determine the Java command to use to start the JVM.

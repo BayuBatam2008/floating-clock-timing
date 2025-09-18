@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.Check
@@ -264,22 +263,21 @@ private fun SyncFab(
     onSync: () -> Unit
 ) {
     ExtendedFloatingActionButton(
-        onClick = { if (!isSyncing) onSync() },
+        text = {
+            Text(
+                text = if (isSyncing) stringResource(id = R.string.syncing) else stringResource(id = R.string.sync_now)
+            )
+        },
         icon = {
             Icon(
                 imageVector = Icons.Default.Sync,
                 contentDescription = null
             )
         },
-        text = {
-            Text(
-                text = if (isSyncing) stringResource(id = R.string.syncing) else stringResource(id = R.string.sync_now)
-            )
-        },
+        onClick = { if (!isSyncing) onSync() },
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        expanded = true,
-        enabled = !isSyncing
+        expanded = true
     )
 }
 
@@ -629,9 +627,6 @@ private fun SyncTab(
                     value = customServer,
                     onValueChange = { customServer = it },
                     label = { Text(text = stringResource(id = R.string.custom_server_hint)) },
-                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(
-                        keyboardType = KeyboardType.Uri
-                    ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     modifier = Modifier.fillMaxWidth()
                 )

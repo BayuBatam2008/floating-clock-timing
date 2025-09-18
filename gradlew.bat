@@ -70,29 +70,15 @@ goto fail
 :execute
 @rem Setup the command line
 
-set WRAPPER_JAR=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
-set WRAPPER_BASE64=%WRAPPER_JAR%.base64
-if not exist "%WRAPPER_JAR%" (
-    if exist "%WRAPPER_BASE64%" (
-        call :decodeWrapperJar "%WRAPPER_BASE64%" "%WRAPPER_JAR%"
-    )
-)
-if not exist "%WRAPPER_JAR%" goto missingWrapperJar
-
 set CLASSPATH=
 
 
 @rem Execute Gradle
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" -jar "%WRAPPER_JAR%" %*
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %*
 
 :end
 @rem End local scope for the variables with windows NT shell
 if %ERRORLEVEL% equ 0 goto mainEnd
-
-:missingWrapperJar
-echo. 1>&2
-echo ERROR: Could not create the Gradle wrapper JAR. Ensure gradle\wrapper\gradle-wrapper.jar.base64 is present. 1>&2
-goto fail
 
 :fail
 rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
@@ -106,29 +92,3 @@ exit /b %EXIT_CODE%
 if "%OS%"=="Windows_NT" endlocal
 
 :omega
-
-:decodeWrapperJar
-setlocal
-set "BASE64_FILE=%~1"
-set "TARGET_FILE=%~2"
-if exist "%TARGET_FILE%" del "%TARGET_FILE%" >NUL 2>&1
-
-where powershell >NUL 2>&1
-if %ERRORLEVEL% equ 0 (
-    set "PWSH_BASE64=%BASE64_FILE:'=''%"
-    set "PWSH_TARGET=%TARGET_FILE:'=''%"
-    powershell -NoProfile -Command "Try { $bytes = [Convert]::FromBase64String((Get-Content -Raw -LiteralPath '%PWSH_BASE64%')); [IO.File]::WriteAllBytes('%PWSH_TARGET%', $bytes) } Catch { exit 1 }"
-    if exist "%TARGET_FILE%" (
-        endlocal & exit /b 0
-    )
-)
-
-where certutil >NUL 2>&1
-if %ERRORLEVEL% equ 0 (
-    certutil -f -decode "%BASE64_FILE%" "%TARGET_FILE%" >NUL 2>&1
-    if exist "%TARGET_FILE%" (
-        endlocal & exit /b 0
-    )
-)
-
-endlocal & exit /b 1
