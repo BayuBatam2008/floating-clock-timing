@@ -11,6 +11,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,6 +65,7 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,8 +74,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -108,6 +116,20 @@ fun FloatingClockApp(
 
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Clock) }
     val overlayActive = overlayState.isVisible || viewModel.isOverlayActive()
+    
+    // Track scroll states for FAB visibility
+    val clockScrollState = rememberScrollState()
+    val syncScrollState = rememberScrollState()
+    val styleScrollState = rememberScrollState()
+    
+    val currentScrollState = when (selectedTab) {
+        MainTab.Clock -> clockScrollState
+        MainTab.Sync -> syncScrollState
+        MainTab.Style -> styleScrollState
+    }
+    
+    // FAB visibility based on scroll
+    val fabExpanded = currentScrollState.value <= 100
 
     Scaffold(
         topBar = {
@@ -151,11 +173,13 @@ fun FloatingClockApp(
                             viewModel.showOverlay()
                             onEnterPip()
                         },
-                        onStopOverlay = viewModel::hideOverlay
+                        onStopOverlay = viewModel::hideOverlay,
+                        expanded = fabExpanded
                     )
                     MainTab.Sync -> SyncFab(
                         isSyncing = timeState.isSyncing,
-                        onSync = viewModel::syncNow
+                        onSync = viewModel::syncNow,
+                        expanded = fabExpanded
                     )
                     MainTab.Style -> {}
                 }
@@ -173,7 +197,7 @@ fun FloatingClockApp(
                 MainTab.Clock -> ClockTab(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(clockScrollState)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     timeState = timeState,
                     overlayState = overlayState,
@@ -185,7 +209,7 @@ fun FloatingClockApp(
                 MainTab.Sync -> SyncTab(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(syncScrollState)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     viewModel = viewModel,
                     timeState = timeState,
@@ -194,7 +218,7 @@ fun FloatingClockApp(
                 MainTab.Style -> CustomizationTab(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(styleScrollState)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     viewModel = viewModel,
                     overlayState = overlayState,
@@ -217,7 +241,8 @@ private fun ClockFab(
     hasOverlayPermission: Boolean,
     onRequestOverlayPermission: () -> Unit,
     onStartOverlay: () -> Unit,
-    onStopOverlay: () -> Unit
+    onStopOverlay: () -> Unit,
+    expanded: Boolean = true
 ) {
     val containerColor = if (overlayActive) {
         MaterialTheme.colorScheme.errorContainer
@@ -253,14 +278,16 @@ private fun ClockFab(
             )
         },
         containerColor = containerColor,
-        contentColor = contentColor
+        contentColor = contentColor,
+        expanded = expanded
     )
 }
 
 @Composable
 private fun SyncFab(
     isSyncing: Boolean,
-    onSync: () -> Unit
+    onSync: () -> Unit,
+    expanded: Boolean = true
 ) {
     ExtendedFloatingActionButton(
         text = {
@@ -277,7 +304,7 @@ private fun SyncFab(
         onClick = { if (!isSyncing) onSync() },
         containerColor = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        expanded = true
+        expanded = expanded
     )
 }
 
@@ -295,11 +322,13 @@ private fun ClockTab(
     var currentMillis by remember(timeState.baseNetworkTimeMillis, timeState.baseElapsedRealtimeMillis) {
         mutableLongStateOf(timeState.baseNetworkTimeMillis)
     }
+    
+    // Optimized time update with less frequent updates
     LaunchedEffect(timeState.baseNetworkTimeMillis, timeState.baseElapsedRealtimeMillis) {
         while (true) {
             currentMillis = timeState.baseNetworkTimeMillis +
                 (SystemClock.elapsedRealtime() - timeState.baseElapsedRealtimeMillis)
-            delay(16L)
+            delay(10L) // Reduced from 16L for smoother updates
         }
     }
     val currentInstant = Instant.ofEpochMilli(currentMillis)
@@ -327,7 +356,12 @@ private fun SyncedTimeCard(
     timeState: TimeSyncState
 ) {
     val formatter = remember { DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss.SSS") }
-    val formattedTime = remember(currentInstant) { formatter.format(currentInstant.atZone(ZoneId.systemDefault())) }
+    
+    // Optimize formatting to prevent excessive recomposition
+    val formattedTime = remember(currentInstant.epochSecond, currentInstant.toEpochMilli() / 10) { 
+        formatter.format(currentInstant.atZone(ZoneId.systemDefault())) 
+    }
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -339,16 +373,11 @@ private fun SyncedTimeCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            AnimatedContent(
-                targetState = formattedTime,
-                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(180)) },
-                label = "syncedTime"
-            ) { timeText ->
-                Text(
-                    text = timeText,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium)
-                )
-            }
+            // Remove AnimatedContent to reduce flickering
+            Text(
+                text = formattedTime,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium)
+            )
             AnimatedContent(
                 targetState = Pair(timeState.offsetMillis, timeState.roundTripMillis),
                 transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
@@ -419,8 +448,9 @@ private fun EventSchedulerCard(
                 )
             }
 
+            // Optimized chip row
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(5L, 10L, 30L, 60L).forEach { secondsToAdd ->
+                remember { listOf(5L, 10L, 30L, 60L) }.forEach { secondsToAdd ->
                     AssistChip(
                         onClick = {
                             digits = durationToDigits(
@@ -432,27 +462,34 @@ private fun EventSchedulerCard(
                 }
             }
 
-            val keypadRows = listOf(
-                listOf("1", "2", "3"),
-                listOf("4", "5", "6"),
-                listOf("7", "8", "9"),
-                listOf("00", "0", "<")
-            )
+            // Optimized keypad with remember for static data
+            val keypadRows = remember {
+                listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("00", "0", "<")
+                )
+            }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                keypadRows.forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        row.forEach { key ->
-                            KeypadButton(
-                                modifier = Modifier.weight(1f),
-                                label = key,
-                                onClick = {
-                                    when (key) {
-                                        "<" -> digits = backspaceDigits(digits)
-                                        else -> digits = appendDigits(digits, key)
-                                    }
+                keypadRows.forEachIndexed { rowIndex, row ->
+                    key(rowIndex) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            row.forEachIndexed { keyIndex, key ->
+                                key("$rowIndex-$keyIndex") {
+                                    KeypadButton(
+                                        modifier = Modifier.weight(1f),
+                                        label = key,
+                                        onClick = {
+                                            when (key) {
+                                                "<" -> digits = backspaceDigits(digits)
+                                                else -> digits = appendDigits(digits, key)
+                                            }
+                                        }
+                                    )
                                 }
-                            )
+                            }
                         }
                     }
                 }
@@ -686,8 +723,7 @@ private fun SyncTab(
                     }
                     Switch(
                         checked = userPreferences.autoSyncEnabled,
-                        onCheckedChange = viewModel::setAutoSync,
-                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
+                        onCheckedChange = viewModel::setAutoSync
                     )
                 }
                 AnimatedVisibility(visible = userPreferences.autoSyncEnabled, enter = fadeIn(), exit = fadeOut()) {
@@ -696,15 +732,12 @@ private fun SyncTab(
                             text = stringResource(id = R.string.auto_sync_interval),
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        ValueIndicatorSlider(
-                            value = sliderValue,
-                            onValueChange = { sliderValue = it },
-                            valueRange = 1f..120f,
-                            steps = 119,
+                        AutoSyncIntervalSlider(
+                            value = sliderValue.roundToInt(),
+                            onValueChange = { sliderValue = it.toFloat() },
                             onValueChangeFinished = {
                                 viewModel.setSyncIntervalMinutes(sliderValue.roundToInt())
-                            },
-                            label = { value -> "${value.roundToInt()} min" }
+                            }
                         )
                     }
                 }
@@ -742,6 +775,15 @@ private fun CustomizationTab(
     overlayState: FloatingOverlayUiState,
     style: FloatingClockStyle
 ) {
+    // Add smooth time updates for preview
+    var currentMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentMillis = System.currentTimeMillis()
+            delay(10L) // Same smooth update as main clock
+        }
+    }
+    
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Card(shape = MaterialTheme.shapes.large) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -792,30 +834,12 @@ private fun CustomizationTab(
                 AnimatedVisibility(visible = !style.useDynamicColor, enter = fadeIn(), exit = fadeOut()) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(text = stringResource(id = R.string.accent_color), style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            val palette = listOf(0xFF3DDC84, 0xFF3A7BD5, 0xFFFF7043, 0xFF7E57C2, 0xFFFFC107)
-                            palette.forEach { colorLong ->
-                                val selected = style.accentColor == colorLong
-                                Card(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clickable { viewModel.updateStyle { it.copy(accentColor = colorLong) } },
-                                    shape = CircleShape,
-                                    colors = CardDefaults.cardColors(containerColor = Color(colorLong))
-                                ) {
-                                    if (selected) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier
-                                                .padding(12.dp)
-                                                .fillMaxSize()
-                                        )
-                                    }
-                                }
+                        HuePicker(
+                            selectedColor = style.accentColor ?: 0xFF3DDC84,
+                            onColorSelected = { colorLong ->
+                                viewModel.updateStyle { it.copy(accentColor = colorLong) }
                             }
-                        }
+                        )
                     }
                 }
             }
@@ -823,9 +847,133 @@ private fun CustomizationTab(
 
         Text(text = stringResource(id = R.string.live_preview), style = MaterialTheme.typography.titleMedium)
         FloatingOverlaySurface(
-            state = overlayState.copy(style = style, isVisible = true),
+            state = overlayState.copy(
+                style = style, 
+                isVisible = true,
+                currentTimeMillis = currentMillis // Pass smooth time updates
+            ),
             onClose = {},
             onDrag = { _, _ -> }
+        )
+    }
+}
+
+@Composable
+private fun HuePicker(
+    selectedColor: Long,
+    onColorSelected: (Long) -> Unit
+) {
+    val density = LocalDensity.current
+    var currentHue by remember {
+        val color = Color(selectedColor)
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(color.value.toInt(), hsv)
+        mutableFloatStateOf(hsv[0])
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Hue bar
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .pointerInput(Unit) {
+                    detectDragGestures { change, _ ->
+                        val x = change.position.x.coerceIn(0f, size.width.toFloat())
+                        val hue = (x / size.width) * 360f
+                        currentHue = hue
+                        val hsvColor = android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f))
+                        onColorSelected(hsvColor.toULong().toLong())
+                    }
+                }
+        ) {
+            val gradient = Brush.horizontalGradient(
+                colors = listOf(
+                    Color.Red,
+                    Color.Yellow,
+                    Color.Green,
+                    Color.Cyan,
+                    Color.Blue,
+                    Color.Magenta,
+                    Color.Red
+                )
+            )
+            drawRect(gradient)
+            
+            // Thumb indicator
+            val thumbX = (currentHue / 360f) * size.width
+            drawCircle(
+                color = Color.White,
+                radius = with(density) { 8.dp.toPx() },
+                center = Offset(thumbX, size.height / 2),
+            )
+            drawCircle(
+                color = Color.Black,
+                radius = with(density) { 6.dp.toPx() },
+                center = Offset(thumbX, size.height / 2),
+            )
+        }
+        
+        // Selected color preview
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(selectedColor))
+        ) {}
+    }
+}
+
+@Composable
+private fun AutoSyncIntervalSlider(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null
+) {
+    val steps = listOf(2, 5, 10, 20, 30, 40, 50, 60)
+    val currentIndex = steps.indexOfFirst { it >= value }.let { if (it == -1) steps.size - 1 else it }
+    
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+    ) {
+        val density = LocalDensity.current
+        val indicatorWidth = 64.dp
+        val indicatorWidthPx = with(density) { indicatorWidth.toPx() }
+        val fraction = currentIndex.toFloat() / (steps.size - 1).coerceAtLeast(1)
+        val offsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
+
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset { IntOffset(offsetPx, 0) }
+        ) {
+            Text(
+                text = "${steps[currentIndex]}",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+
+        Slider(
+            value = currentIndex.toFloat(),
+            onValueChange = { newIndex ->
+                val index = newIndex.roundToInt().coerceIn(0, steps.size - 1)
+                onValueChange(steps[index])
+            },
+            valueRange = 0f..(steps.size - 1).toFloat(),
+            steps = steps.size - 2,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            onValueChangeFinished = { onValueChangeFinished?.invoke() }
         )
     }
 }
@@ -843,8 +991,7 @@ private fun SettingSwitchRow(
         Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
+            onCheckedChange = onCheckedChange
         )
     }
 }
@@ -874,26 +1021,25 @@ private fun ValueIndicatorSlider(
         }
         val offsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
 
-        AnimatedVisibility(
-            visible = enabled && label(value).isNotEmpty(),
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(200)),
+        // Show the value indicator
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .offset { IntOffset(offsetPx, 0) }
         ) {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Text(
-                    text = label(value),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
+            Text(
+                text = when {
+                    label(value).isNotEmpty() -> label(value)
+                    value >= 1f -> String.format("%.1f", value)
+                    else -> String.format("%.2f", value)
+                },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         }
 
         Slider(
