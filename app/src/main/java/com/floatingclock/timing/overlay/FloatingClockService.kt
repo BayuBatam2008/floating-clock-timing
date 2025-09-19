@@ -8,6 +8,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -55,6 +56,31 @@ class LifecycleServiceContext(
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         viewModelStore.clear()
+    }
+    
+    /**
+     * Sets ViewTree owners using reflection to avoid import issues
+     */
+    fun setViewTreeOwners(view: View) {
+        try {
+            // Set ViewTreeLifecycleOwner
+            val lifecycleOwnerClass = Class.forName("androidx.lifecycle.ViewTreeLifecycleOwner")
+            val setLifecycleOwnerMethod = lifecycleOwnerClass.getDeclaredMethod("set", View::class.java, LifecycleOwner::class.java)
+            setLifecycleOwnerMethod.invoke(null, view, this)
+            
+            // Set ViewTreeViewModelStoreOwner
+            val viewModelStoreOwnerClass = Class.forName("androidx.lifecycle.ViewTreeViewModelStoreOwner")
+            val setViewModelStoreOwnerMethod = viewModelStoreOwnerClass.getDeclaredMethod("set", View::class.java, ViewModelStoreOwner::class.java)
+            setViewModelStoreOwnerMethod.invoke(null, view, this)
+            
+            // Set ViewTreeSavedStateRegistryOwner
+            val savedStateRegistryOwnerClass = Class.forName("androidx.savedstate.ViewTreeSavedStateRegistryOwner")
+            val setSavedStateRegistryOwnerMethod = savedStateRegistryOwnerClass.getDeclaredMethod("set", View::class.java, SavedStateRegistryOwner::class.java)
+            setSavedStateRegistryOwnerMethod.invoke(null, view, this)
+        } catch (e: Exception) {
+            // If reflection fails, log the error but continue
+            android.util.Log.w("FloatingClockService", "Failed to set ViewTree owners via reflection", e)
+        }
     }
 }
 
@@ -129,15 +155,21 @@ class FloatingClockService : Service() {
         layoutParams = params
 
         // Create a simple FrameLayout container
-        val container = FrameLayout(this)
+        val container = FrameLayout(lifecycleContext)
         
-        // Add ComposeView to the container with lifecycle context
+        // Set ViewTree owners using reflection
+        lifecycleContext.setViewTreeOwners(container)
+        
+        // Add ComposeView to the container
         val composeView = ComposeView(lifecycleContext).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 FloatingClockContent()
             }
         }
+        
+        // Also set ViewTree owners for ComposeView
+        lifecycleContext.setViewTreeOwners(composeView)
         
         container.addView(
             composeView,
