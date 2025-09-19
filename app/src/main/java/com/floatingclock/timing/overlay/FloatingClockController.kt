@@ -103,7 +103,10 @@ class FloatingClockController(
 
     fun showOverlay(context: Context = appContext) {
         if (overlayActive.compareAndSet(false, true)) {
-            context.startService(Intent(context, FloatingClockService::class.java))
+            // Check if service is already running to prevent duplicates
+            if (!FloatingClockService.isRunning()) {
+                context.startService(Intent(context, FloatingClockService::class.java))
+            }
         }
         _overlayState.update { it.copy(isVisible = true) }
     }

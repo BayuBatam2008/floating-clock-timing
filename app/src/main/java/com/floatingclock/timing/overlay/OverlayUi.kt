@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,8 +31,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +51,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 
 @Composable
 fun FloatingOverlaySurface(
@@ -77,15 +82,32 @@ fun FloatingOverlaySurface(
         surfaceColor
     }
 
-    val timeText = remember(state.currentTimeMillis, style.showSeconds, style.showMillis) {
-        formatTime(state.currentTimeMillis, style.showSeconds, style.showMillis)
+    // Add smooth millisecond updates like in live preview
+    var smoothCurrentMillis by remember { mutableLongStateOf(state.currentTimeMillis) }
+    
+    LaunchedEffect(style.showMillis) {
+        if (style.showMillis) {
+            while (true) {
+                smoothCurrentMillis = System.currentTimeMillis()
+                delay(16L) // 60 FPS for smooth milliseconds
+            }
+        } else {
+            smoothCurrentMillis = state.currentTimeMillis
+        }
     }
-    val dateText = remember(state.currentTimeMillis) {
-        formatDate(state.currentTimeMillis)
+    
+    // Use smooth time for display when showing milliseconds
+    val displayTimeMillis = if (style.showMillis) smoothCurrentMillis else state.currentTimeMillis
+
+    val timeText = remember(displayTimeMillis, style.showSeconds, style.showMillis) {
+        formatTime(displayTimeMillis, style.showSeconds, style.showMillis)
     }
-    val eventInfo = remember(state.currentTimeMillis, state.eventTimeMillis) {
+    val dateText = remember(displayTimeMillis) {
+        formatDate(displayTimeMillis)
+    }
+    val eventInfo = remember(displayTimeMillis, state.eventTimeMillis) {
         state.eventTimeMillis?.let { eventMillis ->
-            val diff = eventMillis - state.currentTimeMillis
+            val diff = eventMillis - displayTimeMillis
             if (diff > 0) {
                 "Event in ${formatDuration(diff)}"
             } else {
@@ -105,7 +127,7 @@ fun FloatingOverlaySurface(
         tonalElevation = 12.dp,
         shadowElevation = 8.dp,
         modifier = Modifier
-            .widthIn(min = 220.dp)
+            .widthIn(min = 180.dp, max = 250.dp) // More compact for PiP style
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consumeAllChanges()
@@ -114,27 +136,40 @@ fun FloatingOverlaySurface(
             }
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), // Reduced padding for compactness
+            verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced spacing
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Compact header with drag handle and close button
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(24.dp) // Fixed height for compact header
+            ) {
                 Icon(
                     imageVector = Icons.Default.DragIndicator,
                     contentDescription = null,
-                    tint = accentColor.copy(alpha = 0.6f)
+                    tint = accentColor.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp) // Smaller icon
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(24.dp) // Smaller close button
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close, 
+                        contentDescription = "Close",
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { // Reduced spacing
                 Text(
                     text = timeText,
                     style = MaterialTheme.typography.displayMedium.copy(
                         fontSize = run {
-                            val scaled = 34.sp * style.fontScale
-                            if (scaled < 20.sp) 20.sp else scaled
+                            // More compact font size for PiP
+                            val scaled = 28.sp * style.fontScale
+                            if (scaled < 18.sp) 18.sp else scaled
                         },
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -144,7 +179,7 @@ fun FloatingOverlaySurface(
                 )
                 Text(
                     text = dateText,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium, // Smaller font
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

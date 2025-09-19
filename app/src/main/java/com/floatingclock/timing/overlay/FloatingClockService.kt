@@ -86,6 +86,13 @@ class LifecycleServiceContext(
 
 class FloatingClockService : Service() {
 
+    companion object {
+        private var isServiceRunning = false
+        private var serviceInstance: FloatingClockService? = null
+        
+        fun isRunning(): Boolean = isServiceRunning
+    }
+
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private var overlayView: ViewGroup? = null
     private lateinit var controller: FloatingClockController
@@ -94,6 +101,15 @@ class FloatingClockService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // Prevent multiple instances
+        if (isServiceRunning) {
+            stopSelf()
+            return
+        }
+        
+        isServiceRunning = true
+        serviceInstance = this
         
         // Create lifecycle context
         lifecycleContext = LifecycleServiceContext(this)
@@ -120,6 +136,10 @@ class FloatingClockService : Service() {
         removeOverlay()
         controller.onServiceDestroyed()
         lifecycleContext.onDestroy()
+        
+        // Reset service state
+        isServiceRunning = false
+        serviceInstance = null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -143,14 +163,18 @@ class FloatingClockService : Service() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             type,
+            // Picture-in-Picture style flags
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 64
-            y = 128
+            gravity = Gravity.TOP or Gravity.END
+            x = 16 // Small margin from edge
+            y = 100 // Below status bar
+            // Set window level to appear above other apps but not system UI
+            windowAnimations = android.R.style.Animation_Toast
         }
         layoutParams = params
 
@@ -179,8 +203,13 @@ class FloatingClockService : Service() {
             )
         )
         
-        windowManager.addView(container, params)
-        overlayView = container
+        try {
+            windowManager.addView(container, params)
+            overlayView = container
+        } catch (e: Exception) {
+            android.util.Log.e("FloatingClockService", "Failed to add overlay view", e)
+            stopSelf()
+        }
     }
     
     @Composable
