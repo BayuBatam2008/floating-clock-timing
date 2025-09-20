@@ -77,7 +77,14 @@ class TimeSyncManager(
         return mutex.withLock {
             val server = serverOverride ?: _state.value.selectedServer
             _state.value = _state.value.copy(isSyncing = true, errorMessage = null)
-            val result = ntpClient.requestTime(server)
+            
+            // Try with fallback servers if no specific server is requested
+            val result = if (serverOverride != null) {
+                ntpClient.requestTime(server)
+            } else {
+                ntpClient.requestTimeWithFallback(_state.value.availableServers)
+            }
+            
             result.onSuccess { ntpResult ->
                 val elapsed = SystemClock.elapsedRealtime()
                 val networkNow = ntpResult.ntpTimeMillis

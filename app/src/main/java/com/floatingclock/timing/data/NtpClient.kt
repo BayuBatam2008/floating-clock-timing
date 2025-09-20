@@ -1,6 +1,7 @@
 package com.floatingclock.timing.data
 
 import java.net.InetAddress
+import java.net.UnknownHostException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.net.ntp.NTPUDPClient
@@ -14,7 +15,14 @@ class NtpClient {
                 client.defaultTimeout = timeoutMillis
                 try {
                     client.open()
-                    val address = InetAddress.getByName(server)
+                    
+                    // Try to resolve hostname with better error handling
+                    val address = try {
+                        InetAddress.getByName(server)
+                    } catch (e: UnknownHostException) {
+                        throw Exception("Unable to resolve hostname '$server'. Check your internet connection and DNS settings.", e)
+                    }
+                    
                     val timeInfo: TimeInfo = client.getTime(address)
                     timeInfo.computeDetails()
                     val message = timeInfo.message
@@ -27,10 +35,30 @@ class NtpClient {
                         roundTripMillis = delay
                     )
                 } finally {
-                    client.close()
+                    if (client.isOpen) {
+                        client.close()
+                    }
                 }
             }
         }
+    }
+    
+    suspend fun requestTimeWithFallback(servers: List<String>, timeoutMillis: Int = 3_000): Result<NtpResult> {
+        var lastException: Exception? = null
+        
+        for (server in servers) {
+            try {
+                val result = requestTime(server, timeoutMillis)
+                if (result.isSuccess) {
+                    return result
+                }
+                lastException = result.exceptionOrNull() as? Exception
+            } catch (e: Exception) {
+                lastException = e
+            }
+        }
+        
+        return Result.failure(lastException ?: Exception("All NTP servers failed"))
     }
 }
 

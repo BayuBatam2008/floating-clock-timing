@@ -41,4 +41,6 @@ build
 
 # Gradle wrapper binary
 gradle/wrapper/gradle-wrapper.jar
-.kotlin/sessions/kotlin-compiler-6009164364323366754.salive
+
+# Ignore Kotlin specific files
+.kotlin/

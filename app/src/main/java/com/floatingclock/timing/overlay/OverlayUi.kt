@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -52,6 +53,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import kotlinx.coroutines.delay
+import com.floatingclock.timing.data.AppDependencies
 
 @Composable
 fun FloatingOverlaySurface(
@@ -88,7 +90,15 @@ fun FloatingOverlaySurface(
     LaunchedEffect(style.showMillis) {
         if (style.showMillis) {
             while (true) {
-                smoothCurrentMillis = System.currentTimeMillis()
+                // Use accurate time from TimeSyncManager when available
+                val timeSyncManager = AppDependencies.timeSyncManager
+                val timeState = timeSyncManager.state.value
+                
+                smoothCurrentMillis = if (timeState.isInitialized) {
+                    timeSyncManager.currentTimeMillis()
+                } else {
+                    System.currentTimeMillis()
+                }
                 delay(16L) // 60 FPS for smooth milliseconds
             }
         } else {
@@ -127,7 +137,8 @@ fun FloatingOverlaySurface(
         tonalElevation = 12.dp,
         shadowElevation = 8.dp,
         modifier = Modifier
-            .widthIn(min = 180.dp, max = 250.dp) // More compact for PiP style
+            .widthIn(min = 280.dp, max = 350.dp) // Wider for PiP-like aspect ratio
+            .heightIn(min = 120.dp, max = 150.dp) // Control height for 2.3:1 aspect ratio
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consumeAllChanges()
@@ -136,51 +147,31 @@ fun FloatingOverlaySurface(
             }
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), // Reduced padding for compactness
-            verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced spacing
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp), // PiP-like padding
+            verticalArrangement = Arrangement.Center, // Center content like PiP
+            horizontalAlignment = Alignment.CenterHorizontally // Center alignment
         ) {
-            // Compact header with drag handle and close button
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.height(24.dp) // Fixed height for compact header
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DragIndicator,
-                    contentDescription = null,
-                    tint = accentColor.copy(alpha = 0.6f),
-                    modifier = Modifier.size(16.dp) // Smaller icon
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(24.dp) // Smaller close button
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close, 
-                        contentDescription = "Close",
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { // Reduced spacing
+            // No header - direct content like PiP
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp), // Tight spacing for compact look
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) { 
                 Text(
                     text = timeText,
                     style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = run {
-                            // More compact font size for PiP
-                            val scaled = 28.sp * style.fontScale
-                            if (scaled < 18.sp) 18.sp else scaled
-                        },
+                        fontSize = 18.sp, // Same size as PiP
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = accentColor,
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier.fillMaxWidth()
+                    textAlign = TextAlign.Center // Center like PiP
                 )
                 Text(
                     text = dateText,
-                    style = MaterialTheme.typography.labelMedium, // Smaller font
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.labelSmall, // Same as PiP
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center // Center like PiP
                 )
             }
             eventInfo?.let { info ->

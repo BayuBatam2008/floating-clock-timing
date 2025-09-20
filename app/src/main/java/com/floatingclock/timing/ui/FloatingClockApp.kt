@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,6 +42,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -96,6 +99,8 @@ import com.floatingclock.timing.data.model.UserPreferences
 import com.floatingclock.timing.overlay.FloatingOverlaySurface
 import com.floatingclock.timing.overlay.FloatingOverlayUiState
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
@@ -170,7 +175,7 @@ fun FloatingClockApp(
                         hasOverlayPermission = hasOverlayPermission,
                         onRequestOverlayPermission = onRequestOverlayPermission,
                         onStartOverlay = {
-                            viewModel.showOverlay()
+                            // Only enter PiP mode, don't start overlay service
                             onEnterPip()
                         },
                         onStopOverlay = viewModel::hideOverlay,
@@ -425,11 +430,44 @@ private fun EventSchedulerCard(
     onSchedule: (Instant) -> Unit,
     onClear: () -> Unit
 ) {
-    var digits by rememberSaveable { mutableStateOf("000000000") }
+    // State for absolute time input (like alarm clock) - default to 00:00:00.000
+    var selectedSegment by rememberSaveable { mutableStateOf(0) } // 0=hours, 1=minutes, 2=seconds, 3=millis
+    var hours by rememberSaveable { mutableStateOf(0) }
+    var minutes by rememberSaveable { mutableStateOf(0) }
+    var seconds by rememberSaveable { mutableStateOf(0) }
+    var millis by rememberSaveable { mutableStateOf(0) }
     var showError by rememberSaveable { mutableStateOf(false) }
 
-    val durationMillis = remember(digits) { digitsToDurationMillis(digits) }
-    val (hours, minutes, seconds, millis) = remember(digits) { digitsToSegments(digits) }
+    // Auto-clear event when it has passed
+    LaunchedEffect(scheduledEvent, currentInstant) {
+        scheduledEvent?.let { event ->
+            if (currentInstant.isAfter(event)) {
+                onClear()
+            }
+        }
+    }
+
+    // Calculate target instant (today or tomorrow based on time comparison)
+    val targetInstant = remember(hours, minutes, seconds, millis, currentInstant) {
+        if (hours == 0 && minutes == 0 && seconds == 0 && millis == 0) {
+            null // Don't calculate if all values are 0
+        } else {
+            val currentZoned = currentInstant.atZone(ZoneId.systemDefault())
+            val currentDate = currentZoned.toLocalDate()
+            val targetTime = java.time.LocalTime.of(hours, minutes, seconds, millis * 1_000_000)
+            val targetDateTime = currentDate.atTime(targetTime)
+            
+            // If target time is before current time, schedule for tomorrow
+            val finalDateTime = if (targetDateTime.isBefore(currentZoned.toLocalDateTime()) || 
+                                   (targetDateTime.isEqual(currentZoned.toLocalDateTime()))) {
+                targetDateTime.plusDays(1)
+            } else {
+                targetDateTime
+            }
+            
+            finalDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        }
+    }
 
     Card(
         shape = MaterialTheme.shapes.large,
@@ -438,7 +476,33 @@ private fun EventSchedulerCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(text = stringResource(id = R.string.schedule_event), style = MaterialTheme.typography.titleMedium)
 
-            EventTimeDisplay(hours = hours, minutes = minutes, seconds = seconds, millis = millis)
+            // Interactive Time Display with highlighting
+            InteractiveTimeDisplay(
+                hours = hours,
+                minutes = minutes,
+                seconds = seconds,
+                millis = millis,
+                selectedSegment = selectedSegment,
+                onSegmentClick = { segment -> selectedSegment = segment }
+            )
+
+            // Show when the alarm will trigger (only if time is set)
+            targetInstant?.let { target ->
+                val scheduleInfo = remember(target, currentInstant) {
+                    val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss.SSS")
+                    val isToday = target.atZone(ZoneId.systemDefault()).toLocalDate() == 
+                                 currentInstant.atZone(ZoneId.systemDefault()).toLocalDate()
+                    val dayText = if (isToday) "Today" else "Tomorrow"
+                    val timeText = formatter.format(target.atZone(ZoneId.systemDefault()))
+                    "$dayText at ${timeText.substring(11)}" // Remove date part for display
+                }
+                
+                Text(
+                    text = "Will trigger: $scheduleInfo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             AnimatedVisibility(visible = showError, enter = fadeIn(), exit = fadeOut()) {
                 Text(
@@ -448,66 +512,62 @@ private fun EventSchedulerCard(
                 )
             }
 
-            // Optimized chip row
+            // Quick time buttons (set to common alarm times)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                remember { listOf(5L, 10L, 30L, 60L) }.forEach { secondsToAdd ->
+                val quickTimes = remember { 
+                    listOf(
+                        Triple(6, 0, "6:00"),
+                        Triple(7, 30, "7:30"),
+                        Triple(12, 0, "12:00"),
+                        Triple(18, 0, "18:00")
+                    )
+                }
+                quickTimes.forEach { (h, m, label) ->
                     AssistChip(
                         onClick = {
-                            digits = durationToDigits(
-                                (durationMillis + secondsToAdd * 1_000L).coerceAtMost(MAX_DURATION_MILLIS)
-                            )
+                            hours = h
+                            minutes = m
+                            seconds = 0
+                            millis = 0
                         },
-                        label = { Text(text = "+${secondsToAdd}s") }
+                        label = { Text(text = label) }
                     )
                 }
             }
 
-            // Optimized keypad with remember for static data
-            val keypadRows = remember {
-                listOf(
-                    listOf("1", "2", "3"),
-                    listOf("4", "5", "6"),
-                    listOf("7", "8", "9"),
-                    listOf("00", "0", "<")
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                keypadRows.forEachIndexed { rowIndex, row ->
-                    key(rowIndex) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            row.forEachIndexed { keyIndex, key ->
-                                key("$rowIndex-$keyIndex") {
-                                    KeypadButton(
-                                        modifier = Modifier.weight(1f),
-                                        label = key,
-                                        onClick = {
-                                            when (key) {
-                                                "<" -> digits = backspaceDigits(digits)
-                                                else -> digits = appendDigits(digits, key)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Interactive Keypad for editing selected segment
+            InteractiveKeypad(
+                selectedSegment = selectedSegment,
+                hours = hours,
+                minutes = minutes,
+                seconds = seconds,
+                millis = millis,
+                onHoursChange = { hours = it.coerceIn(0, 23) },
+                onMinutesChange = { minutes = it.coerceIn(0, 59) },
+                onSecondsChange = { seconds = it.coerceIn(0, 59) },
+                onMillisChange = { millis = it.coerceIn(0, 999) }
+            )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                androidx.compose.material3.Button(onClick = {
-                    if (durationMillis > 0L) {
-                        showError = false
-                        onSchedule(currentInstant.plusMillis(durationMillis))
-                    } else {
-                        showError = true
-                    }
-                }) {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        targetInstant?.let { target ->
+                            showError = false
+                            onSchedule(target)
+                        } ?: run {
+                            showError = true
+                        }
+                    },
+                    enabled = targetInstant != null
+                ) {
                     Text(text = stringResource(id = R.string.schedule_event))
                 }
                 TextButton(onClick = {
-                    digits = "000000000"
+                    hours = 0
+                    minutes = 0
+                    seconds = 0
+                    millis = 0
+                    selectedSegment = 0
                     showError = false
                     onClear()
                 }) {
@@ -533,11 +593,13 @@ private fun EventSchedulerCard(
 }
 
 @Composable
-private fun EventTimeDisplay(
-    hours: String,
-    minutes: String,
-    seconds: String,
-    millis: String
+private fun InteractiveTimeDisplay(
+    hours: Int,
+    minutes: Int,
+    seconds: Int,
+    millis: Int,
+    selectedSegment: Int,
+    onSegmentClick: (Int) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -547,17 +609,87 @@ private fun EventTimeDisplay(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TimeSegment(value = hours, label = "h")
-        TimeSegment(value = minutes, label = "m")
-        TimeSegment(value = seconds, label = "s")
-        TimeSegment(value = millis, label = "ms")
+        // Hours segment (0)
+        InteractiveTimeSegment(
+            value = "%02d".format(hours),
+            label = "h",
+            isSelected = selectedSegment == 0,
+            onClick = { onSegmentClick(0) }
+        )
+        
+        // Minutes segment (1)
+        InteractiveTimeSegment(
+            value = "%02d".format(minutes),
+            label = "m",
+            isSelected = selectedSegment == 1,
+            onClick = { onSegmentClick(1) }
+        )
+        
+        // Seconds segment (2)
+        InteractiveTimeSegment(
+            value = "%02d".format(seconds),
+            label = "s",
+            isSelected = selectedSegment == 2,
+            onClick = { onSegmentClick(2) }
+        )
+        
+        // Milliseconds segment (3)
+        InteractiveTimeSegment(
+            value = "%03d".format(millis),
+            label = "ms",
+            isSelected = selectedSegment == 3,
+            onClick = { onSegmentClick(3) }
+        )
     }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-private fun TimeSegment(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun InteractiveTimeSegment(
+    value: String,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val animatedBackground by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(200),
+        label = "background_color"
+    )
+    
+    val animatedContentColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
+        animationSpec = tween(200),
+        label = "content_color"
+    )
+
+    val animatedLabelColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(200),
+        label = "label_color"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(animatedBackground)
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
         AnimatedContent(
             targetState = value,
             transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(120)) },
@@ -565,13 +697,16 @@ private fun TimeSegment(value: String, label: String) {
         ) { displayValue ->
             Text(
                 text = displayValue,
-                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.SemiBold)
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                ),
+                color = animatedContentColor
             )
         }
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = animatedLabelColor
         )
     }
 }
@@ -606,6 +741,182 @@ private fun KeypadButton(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun InteractiveKeypad(
+    selectedSegment: Int,
+    hours: Int,
+    minutes: Int,
+    seconds: Int,
+    millis: Int,
+    onHoursChange: (Int) -> Unit,
+    onMinutesChange: (Int) -> Unit,
+    onSecondsChange: (Int) -> Unit,
+    onMillisChange: (Int) -> Unit
+) {
+    // State for editing the current segment as string for easier input handling
+    var editingValue by rememberSaveable(selectedSegment) { 
+        mutableStateOf(
+            when (selectedSegment) {
+                0 -> hours.toString()
+                1 -> minutes.toString()
+                2 -> seconds.toString()
+                3 -> millis.toString()
+                else -> "0"
+            }
+        )
+    }
+
+    // Update editing value when selected segment changes
+    LaunchedEffect(selectedSegment, hours, minutes, seconds, millis) {
+        editingValue = when (selectedSegment) {
+            0 -> hours.toString()
+            1 -> minutes.toString()
+            2 -> seconds.toString()
+            3 -> millis.toString()
+            else -> "0"
+        }
+    }
+
+    // Function to handle value input for the selected segment
+    fun updateSelectedSegment(newValue: String) {
+        editingValue = newValue
+        val intValue = newValue.toIntOrNull() ?: 0
+        
+        when (selectedSegment) {
+            0 -> onHoursChange(intValue.coerceIn(0, 23))
+            1 -> onMinutesChange(intValue.coerceIn(0, 59))
+            2 -> onSecondsChange(intValue.coerceIn(0, 59))
+            3 -> onMillisChange(intValue.coerceIn(0, 999))
+        }
+    }
+
+    // Optimized keypad with remember for static data
+    val keypadRows = remember {
+        listOf(
+            listOf("1", "2", "3"),
+            listOf("4", "5", "6"),
+            listOf("7", "8", "9"),
+            listOf("Reset", "0", "⌫")
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Display current editing segment info
+        Text(
+            text = when (selectedSegment) {
+                0 -> "Editing Hours (0-23)"
+                1 -> "Editing Minutes (0-59)"
+                2 -> "Editing Seconds (0-59)"
+                3 -> "Editing Milliseconds (0-999)"
+                else -> "Select a time segment"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+
+        keypadRows.forEachIndexed { rowIndex, row ->
+            key(rowIndex) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    row.forEachIndexed { keyIndex, key ->
+                        key("$rowIndex-$keyIndex") {
+                            InteractiveKeypadButton(
+                                modifier = Modifier.weight(1f),
+                                label = key,
+                                onClick = {
+                                    when (key) {
+                                        "⌫" -> {
+                                            if (editingValue.isNotEmpty()) {
+                                                val newValue = editingValue.dropLast(1)
+                                                updateSelectedSegment(if (newValue.isEmpty()) "0" else newValue)
+                                            }
+                                        }
+                                        "Reset" -> {
+                                            // Clear all time input values
+                                            onHoursChange(0)
+                                            onMinutesChange(0)
+                                            onSecondsChange(0)
+                                            onMillisChange(0)
+                                            editingValue = "0"
+                                        }
+                                        else -> {
+                                            val maxLength = when (selectedSegment) {
+                                                0, 1, 2 -> 2  // Hours, minutes, seconds: max 2 digits
+                                                3 -> 3        // Milliseconds: max 3 digits
+                                                else -> 2
+                                            }
+                                            
+                                            val maxValue = when (selectedSegment) {
+                                                0 -> 23  // Hours: 0-23
+                                                1, 2 -> 59  // Minutes, seconds: 0-59
+                                                3 -> 999  // Milliseconds: 0-999
+                                                else -> 23
+                                            }
+                                            
+                                            // Build new value
+                                            val newValue = if (editingValue == "0") {
+                                                key
+                                            } else {
+                                                val candidate = (editingValue + key).take(maxLength)
+                                                val candidateInt = candidate.toIntOrNull() ?: 0
+                                                if (candidateInt <= maxValue) {
+                                                    candidate
+                                                } else {
+                                                    editingValue // Keep old value if exceeds max
+                                                }
+                                            }
+                                            
+                                            updateSelectedSegment(newValue)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InteractiveKeypadButton(
+    modifier: Modifier = Modifier,
+    label: String,
+    onClick: () -> Unit
+) {
+    val isSpecial = label in listOf("Reset", "⌫")
+    
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        modifier = modifier.height(48.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSpecial) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            contentColor = if (isSpecial) {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.onPrimary
+            }
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = FontWeight.Medium
+            )
+        )
     }
 }
 
