@@ -146,7 +146,7 @@ fun FloatingOverlaySurface(
                 Text(
                     text = timeText,
                     style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = 18.sp,
+                        fontSize = (18.sp * style.fontScale),
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = accentColor,
@@ -157,7 +157,9 @@ fun FloatingOverlaySurface(
                     Line2DisplayMode.DATE_ONLY -> {
                         Text(
                             text = dateText,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
@@ -166,7 +168,9 @@ fun FloatingOverlaySurface(
                         eventInfo?.let { info ->
                             Text(
                                 text = info,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
+                                ),
                                 color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
                                 textAlign = TextAlign.Center
                             )
@@ -175,14 +179,18 @@ fun FloatingOverlaySurface(
                     Line2DisplayMode.BOTH -> {
                         Text(
                             text = dateText,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                         eventInfo?.let { info ->
                             Text(
                                 text = info,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
+                                ),
                                 color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
                                 textAlign = TextAlign.Center
                             )

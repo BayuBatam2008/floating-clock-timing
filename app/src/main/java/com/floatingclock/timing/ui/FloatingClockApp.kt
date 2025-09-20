@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -1119,8 +1121,10 @@ private fun CustomizationTab(
                     value = style.fontScale,
                     onValueChange = { value -> viewModel.updateStyle { it.copy(fontScale = value.coerceIn(0.6f, 1.6f)) } },
                     valueRange = 0.6f..1.6f,
-                    steps = 0,
-                    label = { "" }
+                    steps = 9, // Creates steps at 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
+                    label = { value -> 
+                        "${String.format("%.1f", value)}x"
+                    }
                 )
                 SettingSwitchRow(
                     title = stringResource(id = R.string.use_dynamic_color),
@@ -1137,21 +1141,23 @@ private fun CustomizationTab(
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showMillis = enabled) } }
                 )
                 
-                // Progress Activation Timing - temporarily disabled due to build issue
-                // Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
-                // ValueIndicatorSlider(
-                //     value = style.progressActivationSeconds.toFloat(),
-                //     onValueChange = { value -> viewModel.updateStyle { it.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) } },
-                //     valueRange = 1f..10f,
-                //     steps = 8,
-                //     label = { "${it.toInt()}s" }
-                // )
+                // Progress Activation Timing
+                Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
+                ValueIndicatorSlider(
+                    value = style.progressActivationSeconds.toFloat(),
+                    onValueChange = { value -> viewModel.updateStyle { currentStyle -> 
+                        currentStyle.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) 
+                    } },
+                    valueRange = 1f..10f,
+                    steps = 8,
+                    label = { "${it.toInt()}s" }
+                )
                 
                 // Pulsing Speed
                 Text(text = "Pulsing Speed", style = MaterialTheme.typography.titleSmall)
-                PulsingSpeedSelector(
-                    selectedSpeed = style.pulsingSpeedMs,
-                    onSpeedSelected = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
+                PulsingSpeedSlider(
+                    value = style.pulsingSpeedMs,
+                    onValueChange = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
                 )
                 
                 // Line 2 Display Mode
@@ -1268,6 +1274,80 @@ private fun ColorPickerButton(
 }
 
 @Composable
+private fun EnhancedColorSlider(
+    label: String,
+    value: Int,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    gradientColors: List<Color>,
+    unit: String = ""
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "$value$unit",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+        
+        // Enhanced slider track with gradient background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+        ) {
+            // Gradient track background
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.horizontalGradient(gradientColors),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+            )
+            
+            // Custom slider
+            Slider(
+                value = value.toFloat(),
+                onValueChange = onValueChange,
+                valueRange = valueRange,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.surface,
+                    activeTrackColor = Color.Transparent,
+                    inactiveTrackColor = Color.Transparent
+                )
+            )
+        }
+    }
+}
+
+@Composable
 private fun ColorPickerBottomSheet(
     selectedColor: Long,
     onColorSelected: (Long) -> Unit,
@@ -1301,135 +1381,240 @@ private fun ColorPickerBottomSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Header
-        Row(
+        // Enhanced header with modern design
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "HCT Color Picker",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Close")
-            }
-        }
-        
-        // Color preview with hex code
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(text = "Custom color", style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "#${currentColor.toString(16).uppercase().takeLast(6)}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
+            // Stylish handle indicator
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .width(40.dp)
+                    .height(4.dp)
                     .background(
-                        color = Color(currentColor.toULong()),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(8.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(2.dp)
                     )
             )
-        }
-        
-        // Hue slider
-        ColorSlider(
-            label = "Hue",
-            value = currentHue.toInt(),
-            valueRange = 0f..359f,
-            onValueChange = { currentHue = it },
-            gradientColors = listOf(
-                Color.Red, Color.Yellow, Color.Green, 
-                Color.Cyan, Color.Blue, Color.Magenta, Color.Red
-            )
-        )
-        
-        // Saturation slider  
-        ColorSlider(
-            label = "Chroma",
-            value = (currentSaturation * 100).toInt(),
-            valueRange = 0f..100f,
-            onValueChange = { currentSaturation = it / 100f },
-            gradientColors = listOf(
-                Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, 0f, currentBrightness))),
-                Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, 1f, currentBrightness)))
-            )
-        )
-        
-        // Brightness slider
-        ColorSlider(
-            label = "Tone", 
-            value = (currentBrightness * 100).toInt(),
-            valueRange = 0f..100f,
-            onValueChange = { currentBrightness = it / 100f },
-            gradientColors = listOf(
-                Color.Black,
-                Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, currentSaturation, 1f)))
-            )
-        )
-        
-        // Preset colors
-        Text(text = "Color styles", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            val presetColors = listOf(
-                0xFFFFFFFF, // White
-                0xFFFFA07A, // Light Salmon
-                0xFFF5F5DC, // Beige
-                0xFF40E0D0, // Turquoise
-                0xFFFFD700  // Gold
-            )
-            presetColors.forEach { color ->
-                Box(
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Color Picker",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                IconButton(
+                    onClick = onDismiss,
                     modifier = Modifier
                         .size(40.dp)
                         .background(
-                            color = Color(color),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = CircleShape
                         )
-                        .border(
-                            width = if (currentColor.toULong().toLong() == color.toLong()) 3.dp else 1.dp,
-                            color = if (currentColor.toULong().toLong() == color.toLong()) 
-                                MaterialTheme.colorScheme.primary 
-                            else 
-                                MaterialTheme.colorScheme.outline,
-                            shape = CircleShape
-                        )
-                        .clickable {
-                            val hsv = FloatArray(3)
-                            android.graphics.Color.colorToHSV(color.toInt(), hsv)
-                            currentHue = hsv[0]
-                            currentSaturation = hsv[1] 
-                            currentBrightness = hsv[2]
-                        }
-                )
+                ) {
+                    Icon(
+                        Icons.Default.Close, 
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
         
-        // Apply button
+        // Premium color display card with gradient border
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Large color preview with shadow effect
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(
+                                color = Color(currentColor.toULong()),
+                                shape = CircleShape
+                            )
+                            .border(
+                                width = 3.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                shape = CircleShape
+                            )
+                    )
+                    
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Selected Color",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "#${currentColor.toString(16).uppercase().takeLast(6)}",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "HSL(${currentHue.toInt()}°, ${(currentSaturation * 100).toInt()}%, ${(currentBrightness * 100).toInt()}%)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Enhanced color sliders with better visual design
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            EnhancedColorSlider(
+                label = "Hue",
+                value = currentHue.toInt(),
+                valueRange = 0f..359f,
+                onValueChange = { currentHue = it },
+                gradientColors = listOf(
+                    Color.Red, Color.Yellow, Color.Green, 
+                    Color.Cyan, Color.Blue, Color.Magenta, Color.Red
+                ),
+                unit = "°"
+            )
+            
+            EnhancedColorSlider(
+                label = "Saturation",
+                value = (currentSaturation * 100).toInt(),
+                valueRange = 0f..100f,
+                onValueChange = { currentSaturation = it / 100f },
+                gradientColors = listOf(
+                    Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, 0f, currentBrightness))),
+                    Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, 1f, currentBrightness)))
+                ),
+                unit = "%"
+            )
+            
+            EnhancedColorSlider(
+                label = "Lightness", 
+                value = (currentBrightness * 100).toInt(),
+                valueRange = 0f..100f,
+                onValueChange = { currentBrightness = it / 100f },
+                gradientColors = listOf(
+                    Color.Black,
+                    Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, currentSaturation, 1f)))
+                ),
+                unit = "%"
+            )
+        }
+        
+        // Stylish preset colors section
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = "Color Palette", 
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val presetColors = listOf(
+                    0xFFFFFFFF to "White",
+                    0xFF000000 to "Black", 
+                    0xFFFF6B6B to "Red",
+                    0xFF4ECDC4 to "Teal",
+                    0xFF45B7D1 to "Blue",
+                    0xFF96CEB4 to "Green",
+                    0xFFFECA57 to "Yellow",
+                    0xFFFF9FF3 to "Pink",
+                    0xFFBB6BD9 to "Purple"
+                )
+                
+                items(presetColors.size) { index ->
+                    val (color, name) = presetColors[index]
+                    val isSelected = currentColor.toULong().toLong() == color.toLong()
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    color = Color(color),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .border(
+                                    width = if (isSelected) 3.dp else 2.dp,
+                                    color = if (isSelected) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    val hsv = FloatArray(3)
+                                    android.graphics.Color.colorToHSV(color.toInt(), hsv)
+                                    currentHue = hsv[0].takeIf { !it.isNaN() } ?: 0f
+                                    currentSaturation = hsv[1]
+                                    currentBrightness = hsv[2]
+                                }
+                        )
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Premium apply button
         Button(
             onClick = { onColorSelected(currentColor.toULong().toLong()) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
-            Text("Apply Color")
+            Icon(
+                Icons.Default.Check,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Apply Color",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
         }
         
         Spacer(modifier = Modifier.height(16.dp))
@@ -1442,62 +1627,53 @@ private fun ConnectedButtonGroup(
     onOptionSelected: (String) -> Unit,
     options: List<Pair<String, String>>
 ) {
+    // Material 3 expressive connected button group
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.fillMaxWidth()
+        shape = RoundedCornerShape(20.dp), // More rounded for Material 3
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp), // Padding inside container
+            horizontalArrangement = Arrangement.spacedBy(2.dp) // Small gap between buttons
+        ) {
             options.forEachIndexed { index, (value, label) ->
                 val isSelected = selectedOption == value
-                val isFirst = index == 0
-                val isLast = index == options.size - 1
                 
-                val shape = when {
-                    isFirst -> RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-                    isLast -> RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
-                    else -> RoundedCornerShape(0.dp)
-                }
-                
-                Card(
+                Button(
                     onClick = { onOptionSelected(value) },
-                    modifier = Modifier.weight(1f),
-                    shape = shape,
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) 
-                            MaterialTheme.colorScheme.primaryContainer 
-                        else 
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp), // Standard Material 3 height
+                    shape = RoundedCornerShape(16.dp), // Individual button rounding
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
                             Color.Transparent
+                        },
+                        contentColor = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     ),
-                    border = BorderStroke(
-                        width = 1.dp, 
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        else 
-                            Color.Transparent
-                    )
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = if (isSelected) 2.dp else 0.dp,
+                        pressedElevation = if (isSelected) 4.dp else 1.dp
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
                     Text(
                         text = label,
-                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.onPrimaryContainer 
-                        else 
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
-                    )
-                }
-                
-                // Add divider between buttons (except after last)
-                if (!isLast) {
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(48.dp)
-                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                        maxLines = 1
                     )
                 }
             }
@@ -1583,6 +1759,33 @@ private fun PulsingSpeedSelector(
                 modifier = Modifier.weight(1f)
             )
         }
+    }
+}
+
+@Composable
+private fun PulsingSpeedSlider(
+    value: Int,
+    onValueChange: (Int) -> Unit
+) {
+    // Map slider values (1-5) to actual milliseconds
+    val speedValues = listOf(300, 500, 700, 900, 1200)
+    val speedLabels = listOf("Very Fast", "Fast", "Medium", "Slow", "Very Slow")
+    
+    // Convert current value to slider position (1-5)
+    val currentPosition = speedValues.indexOfFirst { it == value }.takeIf { it >= 0 } ?: 1
+    val currentLabel = speedLabels.getOrNull(currentPosition) ?: "Medium"
+    
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ValueIndicatorSlider(
+            value = (currentPosition + 1).toFloat(),
+            onValueChange = { sliderValue -> 
+                val index = (sliderValue.toInt() - 1).coerceIn(0, speedValues.size - 1)
+                onValueChange(speedValues[index])
+            },
+            valueRange = 1f..5f,
+            steps = 3,
+            label = { currentLabel }
+        )
     }
 }
 
