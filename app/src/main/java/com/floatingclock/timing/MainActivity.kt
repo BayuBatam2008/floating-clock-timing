@@ -158,12 +158,29 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     var pulsingStartTime by remember { mutableStateOf(0L) }
     var lastTimeDifference by remember { mutableStateOf(Long.MAX_VALUE) }
     
-    // Get timeState to access accurate time
-    val timeState by viewModel.timeState.collectAsState()
+    // Progress state
+    var progressInfo by remember { mutableStateOf(ProgressInfo(0f, false)) }
     
-    LaunchedEffect(timeState) {
+    // Get states including user preferences
+    val timeState by viewModel.timeState.collectAsState()
+    val overlayState by viewModel.overlayState.collectAsState()
+    val userPreferences by viewModel.userPreferences.collectAsState()
+    val scheduledEventTime = overlayState.eventTimeMillis
+    
+    // Create dynamic time formatter based on user preferences
+    val timeFormatter = remember(userPreferences.floatingClockStyle.showMillis) {
+        if (userPreferences.floatingClockStyle.showMillis) {
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
+        } else {
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
+        }
+    }
+    val dateFormatter = remember { java.time.format.DateTimeFormatter.ofPattern("EEE, dd MMM yyyy") }
+    
+    // Single optimized LaunchedEffect for both time and progress updates
+    LaunchedEffect(timeState, scheduledEventTime, userPreferences.floatingClockStyle.showMillis, userPreferences.floatingClockStyle.progressActivationSeconds) {
         while (true) {
-            // Use accurate time from TimeSyncManager instead of system time
+            // Get accurate time once per frame
             val now = if (timeState.isInitialized) {
                 val currentState = timeState
                 val elapsedDelta = android.os.SystemClock.elapsedRealtime() - currentState.baseElapsedRealtimeMillis
@@ -175,76 +192,52 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
             val instant = java.time.Instant.ofEpochMilli(now)
             val zoned = instant.atZone(java.time.ZoneId.systemDefault())
             
-            // Use same format as live preview
-            val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-            val dateFormatter = java.time.format.DateTimeFormatter.ofPattern("EEE, dd MMM yyyy")
-            
+            // Update time display
             currentTime = timeFormatter.format(zoned)
             currentDate = dateFormatter.format(zoned)
-            delay(16) // ~60 FPS for smooth milliseconds
-        }
-    }
-    
-    // Get overlay state to access scheduled event time
-    val overlayState by viewModel.overlayState.collectAsState()
-    val scheduledEventTime = overlayState.eventTimeMillis
-    
-    // Update progress info continuously when active
-    var progressInfo by remember { mutableStateOf(ProgressInfo(0f, false)) }
-    LaunchedEffect(scheduledEventTime, timeState) {
-        while (scheduledEventTime != null) {
-            // Use accurate time from TimeSyncManager
-            val currentMillis = if (timeState.isInitialized) {
-                val currentState = timeState
-                val elapsedDelta = android.os.SystemClock.elapsedRealtime() - currentState.baseElapsedRealtimeMillis
-                currentState.baseNetworkTimeMillis + elapsedDelta
+            
+            // Update progress and pulsing if scheduled event exists
+            if (scheduledEventTime != null) {
+                val timeDifference = scheduledEventTime - now
+                
+                // Precise target time detection
+                if (!isPulsing && 
+                    ((lastTimeDifference > 0L && timeDifference <= 0L) ||
+                     (timeDifference == 0L) ||
+                     (timeDifference >= -50L && timeDifference <= 50L && lastTimeDifference > 50L))) {
+                    isPulsing = true
+                    pulsingStartTime = now
+                }
+                
+                lastTimeDifference = timeDifference
+                
+                // Stop pulsing after 5 seconds
+                if (isPulsing && (now - pulsingStartTime) >= 5000L) {
+                    isPulsing = false
+                }
+                
+                // Update progress based on user preferences
+                val activationMs = userPreferences.floatingClockStyle.progressActivationSeconds * 1000L
+                progressInfo = when {
+                    timeDifference > activationMs -> ProgressInfo(0f, false)
+                    timeDifference >= 0L -> {
+                        val progress = (activationMs - timeDifference) / activationMs.toFloat()
+                        ProgressInfo(progress.coerceIn(0f, 1f), true)
+                    }
+                    timeDifference >= -activationMs -> {
+                        val progress = (activationMs + timeDifference) / activationMs.toFloat()
+                        ProgressInfo(progress.coerceIn(0f, 1f), true)
+                    }
+                    else -> ProgressInfo(0f, false)
+                }
             } else {
-                System.currentTimeMillis()
-            }
-            
-            val timeDifference = scheduledEventTime - currentMillis
-            
-            // Precise target time detection: trigger when we cross from positive to negative or at exact match
-            if (!isPulsing && 
-                ((lastTimeDifference > 0L && timeDifference <= 0L) || // Just crossed target time
-                 (timeDifference == 0L) || // Exact match (rare but possible)
-                 (timeDifference >= -50L && timeDifference <= 50L && lastTimeDifference > 50L))) { // Within 50ms after target
-                isPulsing = true
-                pulsingStartTime = currentMillis
-            }
-            
-            // Update lastTimeDifference for next comparison
-            lastTimeDifference = timeDifference
-            
-            // Stop pulsing after 5 seconds
-            if (isPulsing && (currentMillis - pulsingStartTime) >= 5000L) {
+                // Reset states when no scheduled event
+                progressInfo = ProgressInfo(0f, false)
                 isPulsing = false
+                lastTimeDifference = Long.MAX_VALUE
             }
             
-            progressInfo = when {
-                // Before 5 seconds: inactive
-                timeDifference > 5000L -> ProgressInfo(0f, false)
-                // Within 5 seconds before: filling up
-                timeDifference >= 0L -> {
-                    val progress = (5000L - timeDifference) / 5000f
-                    ProgressInfo(progress.coerceIn(0f, 1f), true)
-                }
-                // Within 5 seconds after: emptying
-                timeDifference >= -5000L -> {
-                    val progress = (5000L + timeDifference) / 5000f
-                    ProgressInfo(progress.coerceIn(0f, 1f), true)
-                }
-                // After 5 seconds: inactive
-                else -> ProgressInfo(0f, false)
-            }
-            
-            delay(16) // Update every 16ms for smooth 60 FPS progress
-        }
-        // Reset progress and pulsing when no scheduled event
-        if (scheduledEventTime == null) {
-            progressInfo = ProgressInfo(0f, false)
-            isPulsing = false
-            lastTimeDifference = Long.MAX_VALUE
+            delay(16) // Single 60 FPS update loop
         }
     }
     
@@ -253,15 +246,29 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
         scheduledEventTime?.let { eventMillis: Long ->
             val instant = java.time.Instant.ofEpochMilli(eventMillis)
             val zoned = instant.atZone(java.time.ZoneId.systemDefault())
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
             formatter.format(zoned)
         }
     }
     
-    // Use Material3 color scheme
-    val primaryColor = MaterialTheme.colorScheme.primary // Main theme color
-    val passiveColor = MaterialTheme.colorScheme.onSurfaceVariant // Passive color
-    val surfaceColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.95f)
+    // Use Material3 color scheme with user preferences
+    val accentColor = remember(userPreferences.floatingClockStyle.accentColor, userPreferences.floatingClockStyle.useDynamicColor) {
+        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.accentColor == null) {
+            null // Use default Material 3 primary color
+        } else {
+            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.accentColor!!)
+        }
+    }
+    val primaryColor = accentColor ?: MaterialTheme.colorScheme.primary
+    val passiveColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val customBackground = remember(userPreferences.floatingClockStyle.backgroundColor, userPreferences.floatingClockStyle.useDynamicColor) {
+        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.backgroundColor == null) {
+            null
+        } else {
+            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.backgroundColor!!)
+        }
+    }
+    val surfaceColor = customBackground ?: MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.95f)
     
     // Pulsing animation colors
     val pulsingColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
@@ -272,7 +279,7 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
         targetValue = if (isPulsing) pulsingColor else normalColor,
         animationSpec = if (isPulsing) {
             infiniteRepeatable(
-                animation = tween(500, easing = FastOutSlowInEasing),
+                animation = tween(userPreferences.floatingClockStyle.pulsingSpeedMs, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse
             )
         } else {
@@ -305,32 +312,57 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 textAlign = TextAlign.Start // Left aligned
             )
             
-            // Line 2: Date (left) and Target Time (right) - small font, passive color
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Date - left aligned, small font, passive color
-                Text(
-                    text = currentDate,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp // Small font size
-                    ),
-                    color = passiveColor, // Passive color
-                    textAlign = TextAlign.Start
-                )
-                
-                // Target time - right aligned, small font, passive color (if exists)
-                targetTime?.let { target ->
+            // Line 2: Display based on user preference
+            val displayMode = userPreferences.floatingClockStyle.getLine2DisplayMode()
+            when (displayMode) {
+                com.floatingclock.timing.data.model.Line2DisplayMode.DATE_ONLY -> {
                     Text(
-                        text = target,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp // Small font size
+                        text = currentDate,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
                         ),
-                        color = passiveColor, // Passive color
-                        textAlign = TextAlign.End
+                        color = passiveColor,
+                        textAlign = TextAlign.Start
                     )
+                }
+                com.floatingclock.timing.data.model.Line2DisplayMode.TARGET_TIME_ONLY -> {
+                    targetTime?.let { target ->
+                        Text(
+                            text = target,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = if (progressInfo.isActive) primaryColor else passiveColor,
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                }
+                com.floatingclock.timing.data.model.Line2DisplayMode.BOTH -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = currentDate,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                            color = passiveColor,
+                            textAlign = TextAlign.Start
+                        )
+                        targetTime?.let { target ->
+                            Text(
+                                text = target,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                                color = if (progressInfo.isActive) primaryColor else passiveColor,
+                                textAlign = TextAlign.End
+                            )
+                        }
+                    }
+                }
+                com.floatingclock.timing.data.model.Line2DisplayMode.NONE -> {
+                    // Don't show anything for line 2
                 }
             }
             

@@ -1137,21 +1137,21 @@ private fun CustomizationTab(
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showMillis = enabled) } }
                 )
                 
-                // Progress Activation Timing - temporarily disabled due to build issue
-                // Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
-                // ValueIndicatorSlider(
-                //     value = style.progressActivationSeconds.toFloat(),
-                //     onValueChange = { value -> viewModel.updateStyle { it.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) } },
-                //     valueRange = 1f..10f,
-                //     steps = 8,
-                //     label = { "${it.toInt()}s" }
-                // )
+                // Progress Activation Timing
+                Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
+                ValueIndicatorSlider(
+                    value = style.progressActivationSeconds.toFloat(),
+                    onValueChange = { value -> viewModel.updateStyle { it.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) } },
+                    valueRange = 1f..10f,
+                    steps = 8,
+                    label = { "${it.toInt()}s" }
+                )
                 
                 // Pulsing Speed
                 Text(text = "Pulsing Speed", style = MaterialTheme.typography.titleSmall)
-                PulsingSpeedSelector(
-                    selectedSpeed = style.pulsingSpeedMs,
-                    onSpeedSelected = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
+                PulsingSpeedSlider(
+                    value = style.pulsingSpeedMs,
+                    onValueChange = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
                 )
                 
                 // Line 2 Display Mode
@@ -1301,52 +1301,96 @@ private fun ColorPickerBottomSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Header
-        Row(
+        // Enhanced header with handle indicator
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "HCT Color Picker",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
+            // Handle indicator
+            Box(
+                modifier = Modifier
+                    .width(32.dp)
+                    .height(4.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(2.dp)
+                    )
             )
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Close")
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Color Picker",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Default.Close, 
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
             }
         }
         
-        // Color preview with hex code
-        Row(
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Modern color display card
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text(text = "Custom color", style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "#${currentColor.toString(16).uppercase().takeLast(6)}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(32.dp)
-                    .background(
-                        color = Color(currentColor.toULong()),
-                        shape = RoundedCornerShape(8.dp)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Large color preview circle
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            color = Color(currentColor.toULong()),
+                            shape = CircleShape
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            shape = CircleShape
+                        )
+                )
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Selected Color",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(8.dp)
+                    Text(
+                        text = "#${currentColor.toString(16).uppercase().takeLast(6)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
                     )
-            )
+                }
+            }
         }
+        
+        Spacer(modifier = Modifier.height(16.dp))
         
         // Hue slider
         ColorSlider(
@@ -1443,50 +1487,55 @@ private fun ConnectedButtonGroup(
     options: List<Pair<String, String>>
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.fillMaxWidth()
+        shape = RoundedCornerShape(28.dp), // Material 3 rounded corners
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp)
+        ) {
             options.forEachIndexed { index, (value, label) ->
                 val isSelected = selectedOption == value
                 val isFirst = index == 0
                 val isLast = index == options.size - 1
                 
                 val shape = when {
-                    isFirst -> RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-                    isLast -> RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
+                    isFirst -> RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
+                    isLast -> RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp) 
                     else -> RoundedCornerShape(0.dp)
                 }
                 
-                Card(
+                Button(
                     onClick = { onOptionSelected(value) },
                     modifier = Modifier.weight(1f),
                     shape = shape,
-                    colors = CardDefaults.cardColors(
+                    colors = ButtonDefaults.buttonColors(
                         containerColor = if (isSelected) 
-                            MaterialTheme.colorScheme.primaryContainer 
+                            MaterialTheme.colorScheme.secondaryContainer
                         else 
-                            Color.Transparent
+                            Color.Transparent,
+                        contentColor = if (isSelected)
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    border = BorderStroke(
-                        width = 1.dp, 
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        else 
-                            Color.Transparent
-                    )
+                    border = if (!isSelected) BorderStroke(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline
+                    ) else null,
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = if (isSelected) 1.dp else 0.dp
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Text(
                         text = label,
-                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.onPrimaryContainer 
-                        else 
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
                     )
                 }
@@ -1513,28 +1562,51 @@ private fun ColorSlider(
     onValueChange: (Float) -> Unit,
     gradientColors: List<Color>
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
         ) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium)
-            Text(text = value.toString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(
+                text = label, 
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = value.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
         }
         
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Gradient background
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(32.dp)
-                    .clip(RoundedCornerShape(16.dp))
+            // Enhanced gradient background with shadow
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
-                val gradient = Brush.horizontalGradient(colors = gradientColors)
-                drawRect(gradient, size = size)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(36.dp)
+                ) {
+                    val gradient = Brush.horizontalGradient(colors = gradientColors)
+                    drawRect(gradient, size = size)
+                }
             }
             
-            // Slider
+            // Enhanced slider
             Slider(
                 value = when (label) {
                     "Hue" -> value.toFloat()
@@ -1544,45 +1616,55 @@ private fun ColorSlider(
                 valueRange = valueRange,
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
+                    thumbColor = MaterialTheme.colorScheme.onPrimary,
                     activeTrackColor = Color.Transparent,
                     inactiveTrackColor = Color.Transparent
-                )
+                ),
+                thumb = {
+                    // Custom thumb with shadow
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                shape = CircleShape
+                            )
+                            .border(
+                                width = 3.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
+                    )
+                }
             )
         }
     }
 }
 
 @Composable
-private fun PulsingSpeedSelector(
-    selectedSpeed: Int,
-    onSpeedSelected: (Int) -> Unit
+private fun PulsingSpeedSlider(
+    value: Int,
+    onValueChange: (Int) -> Unit
 ) {
-    val speedOptions = listOf(
-        300 to "Very Fast",
-        500 to "Fast", 
-        700 to "Medium",
-        900 to "Slow",
-        1200 to "Very Slow"
-    )
+    // Map slider values (1-5) to actual milliseconds
+    val speedValues = listOf(300, 500, 700, 900, 1200)
+    val speedLabels = listOf("Very Fast", "Fast", "Medium", "Slow", "Very Slow")
     
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        speedOptions.forEach { (speed, label) ->
-            AssistChip(
-                onClick = { onSpeedSelected(speed) },
-                label = { Text(label, fontSize = 12.sp) },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (selectedSpeed == speed) 
-                        MaterialTheme.colorScheme.primaryContainer 
-                    else 
-                        MaterialTheme.colorScheme.surfaceVariant
-                ),
-                modifier = Modifier.weight(1f)
-            )
-        }
+    // Convert current value to slider position (1-5)
+    val currentPosition = speedValues.indexOfFirst { it == value }.takeIf { it >= 0 } ?: 1
+    val currentLabel = speedLabels.getOrNull(currentPosition) ?: "Medium"
+    
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ValueIndicatorSlider(
+            value = (currentPosition + 1).toFloat(),
+            onValueChange = { sliderValue -> 
+                val index = (sliderValue.toInt() - 1).coerceIn(0, speedValues.size - 1)
+                onValueChange(speedValues[index])
+            },
+            valueRange = 1f..5f,
+            steps = 3,
+            label = { currentLabel }
+        )
     }
 }
 
