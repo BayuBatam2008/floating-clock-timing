@@ -6,6 +6,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,8 +31,6 @@ fun EventEditModal(
     // Collect individual states instead of uiState
     val eventName by eventViewModel.eventName.collectAsState()
     val selectedDate by eventViewModel.selectedDate.collectAsState()
-    val soundEnabled by eventViewModel.soundEnabled.collectAsState()
-    val vibrationEnabled by eventViewModel.vibrationEnabled.collectAsState()
     val timeInput by eventViewModel.currentTimeInput.collectAsState()
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
@@ -60,11 +60,14 @@ fun EventEditModal(
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = { 
+                    eventViewModel.saveEvent()
+                    onDismiss()
+                }) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Save Event",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -95,7 +98,7 @@ fun EventEditModal(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = selectedDate.toString(),
+                        text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -110,54 +113,6 @@ fun EventEditModal(
                 currentTimeInput = timeInput,
                 eventViewModel = eventViewModel
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Sound and Vibration Settings
-            Card(
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Alert Settings",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Sound",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Switch(
-                            checked = soundEnabled,
-                            onCheckedChange = { eventViewModel.updateSoundEnabled(it) }
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Vibration",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Switch(
-                            checked = vibrationEnabled,
-                            onCheckedChange = { eventViewModel.updateVibrationEnabled(it) }
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

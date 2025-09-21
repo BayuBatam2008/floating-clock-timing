@@ -13,7 +13,9 @@ enum class Line2DisplayMode {
 data class FloatingClockStyle(
     val fontScale: Float = 1f,
     val showMillis: Boolean = true,
+    val showProgressIndicator: Boolean = true,
     val progressActivationSeconds: Int = 5,
+    val enablePulsing: Boolean = true,
     val pulsingSpeedMs: Int = 500,
     val line2DisplayMode: String = Line2DisplayMode.DATE_ONLY.name
 ) {

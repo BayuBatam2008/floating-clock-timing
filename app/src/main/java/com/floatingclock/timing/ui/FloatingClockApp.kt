@@ -118,9 +118,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.floatingclock.timing.MainViewModel
 import com.floatingclock.timing.R
 import com.floatingclock.timing.ui.events.EventsScreen
+import com.floatingclock.timing.ui.events.EventViewModel
 import com.floatingclock.timing.data.TimeSyncState
 import com.floatingclock.timing.data.model.FloatingClockStyle
 import com.floatingclock.timing.data.model.UserPreferences
@@ -147,6 +149,13 @@ fun FloatingClockApp(
     val timeState by viewModel.timeState.collectAsStateWithLifecycle()
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
     val overlayState by viewModel.overlayState.collectAsStateWithLifecycle()
+    
+    // EventViewModel for managing events
+    val eventViewModel: EventViewModel = viewModel(
+        factory = EventViewModel.Factory(
+            (LocalContext.current.applicationContext as com.floatingclock.timing.FloatingClockApplication).eventRepository
+        )
+    )
 
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Clock) }
     val overlayActive = overlayState.isVisible || viewModel.isOverlayActive()
@@ -219,9 +228,13 @@ fun FloatingClockApp(
                     MainTab.Events -> EventsFab(
                         isSelectionMode = eventsSelectionMode,
                         selectedCount = eventsSelectedEvents.size,
-                        onCreateEvent = { /* TODO: trigger event creation */ },
+                        onCreateEvent = { 
+                            eventViewModel.showCreateEventDialog()
+                        },
                         onDeleteSelected = { 
-                            // TODO: Delete selected events
+                            eventsSelectedEvents.forEach { eventId ->
+                                eventViewModel.deleteEvent(eventId)
+                            }
                             eventsSelectedEvents = emptySet()
                             eventsSelectionMode = false
                         },
@@ -259,6 +272,7 @@ fun FloatingClockApp(
                 )
                 MainTab.Events -> EventsScreen(
                     modifier = Modifier.fillMaxSize(),
+                    eventViewModel = eventViewModel,
                     isSelectionMode = eventsSelectionMode,
                     selectedEvents = eventsSelectedEvents,
                     onSelectionModeChange = { eventsSelectionMode = it },
@@ -611,29 +625,6 @@ private fun EventSchedulerCard(
                 )
             }
 
-            // Quick time buttons (set to common alarm times)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val quickTimes = remember { 
-                    listOf(
-                        Triple(6, 0, "6:00"),
-                        Triple(7, 30, "7:30"),
-                        Triple(12, 0, "12:00"),
-                        Triple(18, 0, "18:00")
-                    )
-                }
-                quickTimes.forEach { (h, m, label) ->
-                    AssistChip(
-                        onClick = {
-                            hours = h
-                            minutes = m
-                            seconds = 0
-                            millis = 0
-                        },
-                        label = { Text(text = label) }
-                    )
-                }
-            }
-
             // Interactive Keypad for editing selected segment
             InteractiveKeypad(
                 selectedSegment = selectedSegment,
@@ -903,21 +894,6 @@ private fun InteractiveKeypad(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Display current editing segment info
-        Text(
-            text = when (selectedSegment) {
-                0 -> "Editing Hours (0-23)"
-                1 -> "Editing Minutes (0-59)"
-                2 -> "Editing Seconds (0-59)"
-                3 -> "Editing Milliseconds (0-999)"
-                else -> "Select a time segment"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
-
         keypadRows.forEachIndexed { rowIndex, row ->
             key(rowIndex) {
                 Row(
@@ -1214,24 +1190,42 @@ private fun CustomizationTab(
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showMillis = enabled) } }
                 )
                 
-                // Progress Activation Timing
-                Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
-                ValueIndicatorSlider(
-                    value = style.progressActivationSeconds.toFloat(),
-                    onValueChange = { value -> viewModel.updateStyle { currentStyle -> 
-                        currentStyle.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) 
-                    } },
-                    valueRange = 1f..10f,
-                    steps = 8,
-                    label = { "${it.toInt()}s" }
+                // Progress Indicator Switch
+                SettingSwitchRow(
+                    title = "Enable Progress Indicator",
+                    checked = style.showProgressIndicator,
+                    onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showProgressIndicator = enabled) } }
                 )
                 
-                // Pulsing Speed
-                Text(text = "Pulsing Speed", style = MaterialTheme.typography.titleSmall)
-                PulsingSpeedSlider(
-                    value = style.pulsingSpeedMs,
-                    onValueChange = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
+                // Progress Activation Timing (only show if progress indicator is enabled)
+                if (style.showProgressIndicator) {
+                    Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
+                    ValueIndicatorSlider(
+                        value = style.progressActivationSeconds.toFloat(),
+                        onValueChange = { value -> viewModel.updateStyle { currentStyle -> 
+                            currentStyle.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) 
+                        } },
+                        valueRange = 1f..10f,
+                        steps = 8,
+                        label = { "${it.toInt()}s" }
+                    )
+                }
+                
+                // Pulsing Switch
+                SettingSwitchRow(
+                    title = "Enable Pulsing",
+                    checked = style.enablePulsing,
+                    onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(enablePulsing = enabled) } }
                 )
+                
+                // Pulsing Speed (only show if pulsing is enabled)
+                if (style.enablePulsing) {
+                    Text(text = "Pulsing Speed", style = MaterialTheme.typography.titleSmall)
+                    PulsingSpeedSlider(
+                        value = style.pulsingSpeedMs,
+                        onValueChange = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
+                    )
+                }
                 
                 // Line 2 Display Mode
                 Text(text = "Line 2 Display", style = MaterialTheme.typography.titleSmall)
@@ -1663,11 +1657,11 @@ private fun LivePreviewClock(
                     }
                 }
                 "BOTH" -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = currentDate,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = (12.sp * userPreferences.floatingClockStyle.fontScale),
+                                fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                                 fontWeight = FontWeight.Medium
                             ),
                             color = secondaryAccentColor,
@@ -1675,9 +1669,9 @@ private fun LivePreviewClock(
                         )
                         targetTime?.let { target ->
                             Text(
-                                text = target,
+                                text = "• $target",
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = (12.sp * userPreferences.floatingClockStyle.fontScale),
+                                    fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                                     fontWeight = FontWeight.Medium
                                 ),
                                 color = secondaryAccentColor,

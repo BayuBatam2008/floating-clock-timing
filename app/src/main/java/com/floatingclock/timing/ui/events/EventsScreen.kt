@@ -199,13 +199,12 @@ private fun EventCard(
                 else -> MaterialTheme.colorScheme.surfaceVariant
             }
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        shape = MaterialTheme.shapes.large
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Selection mode checkbox on the left
@@ -244,7 +243,19 @@ private fun EventCard(
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Event date
+                Text(
+                    text = event.getFormattedDate(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (event.isEnabled) 
+                        MaterialTheme.colorScheme.primary
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
                 
                 // Event name
                 Text(
@@ -257,19 +268,6 @@ private fun EventCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
-                // Time until event (if upcoming)
-                if (event.isEnabled && event.isUpcoming()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = event.getTimeUntilEvent(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (event.isEnabled)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
             
             Spacer(modifier = Modifier.width(16.dp))
