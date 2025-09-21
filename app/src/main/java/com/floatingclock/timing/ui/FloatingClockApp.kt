@@ -55,7 +55,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
@@ -992,7 +992,7 @@ private fun SyncTab(
                                 colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                             )
                         }
-                        Divider()
+                        HorizontalDivider()
                     }
                 }
                 OutlinedTextField(
@@ -1134,15 +1134,6 @@ private fun CustomizationTab(
                     }
                 )
                 SettingSwitchRow(
-                    title = stringResource(id = R.string.use_dynamic_color),
-                    checked = style.useDynamicColor,
-                    onCheckedChange = { enabled ->
-                        viewModel.updateStyle {
-                            it.copy(useDynamicColor = enabled, accentColor = if (enabled) null else it.accentColor)
-                        }
-                    }
-                )
-                SettingSwitchRow(
                     title = stringResource(id = R.string.show_millis),
                     checked = style.showMillis,
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showMillis = enabled) } }
@@ -1191,318 +1182,7 @@ private fun CustomizationTab(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ColorPickerBottomSheet(
-    selectedColor: Long,
-    bottomSheetState: androidx.compose.material3.SheetState,
-    onColorSelected: (Long) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // Safe color conversion with proper validation
-    val safeSelectedColor = (selectedColor and 0xFFFFFFFF).toInt()
-    val coroutineScope = rememberCoroutineScope()
-    
-    var currentHue by remember(selectedColor) {
-        val hsv = FloatArray(3)
-        try {
-            android.graphics.Color.colorToHSV(safeSelectedColor, hsv)
-            mutableFloatStateOf(if (hsv[0].isNaN()) 0f else hsv[0])
-        } catch (e: Exception) {
-            mutableFloatStateOf(0f)
-        }
-    }
-    
-    var currentSaturation by remember(selectedColor) {
-        val hsv = FloatArray(3)
-        try {
-            android.graphics.Color.colorToHSV(safeSelectedColor, hsv)
-            mutableFloatStateOf(hsv[1].coerceIn(0f, 1f))
-        } catch (e: Exception) {
-            mutableFloatStateOf(1f)
-        }
-    }
-    
-    var currentBrightness by remember(selectedColor) {
-        val hsv = FloatArray(3)
-        try {
-            android.graphics.Color.colorToHSV(safeSelectedColor, hsv)
-            mutableFloatStateOf(hsv[2].coerceIn(0f, 1f))
-        } catch (e: Exception) {
-            mutableFloatStateOf(1f)
-        }
-    }
-    
-    val currentColor = remember(currentHue, currentSaturation, currentBrightness) {
-        try {
-            val validHue = if (currentHue.isNaN()) 0f else currentHue.coerceIn(0f, 359f)
-            val validSaturation = currentSaturation.coerceIn(0f, 1f)
-            val validBrightness = currentBrightness.coerceIn(0f, 1f)
-            android.graphics.Color.HSVToColor(floatArrayOf(validHue, validSaturation, validBrightness))
-        } catch (e: Exception) {
-            android.graphics.Color.WHITE
-        }
-    }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        // Enhanced header with modern design
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Color Picker",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                IconButton(
-                    onClick = {
-                        // Use the same animation as swipe down
-                        coroutineScope.launch {
-                            bottomSheetState.hide()
-                        }
-                        onDismiss()
-                    },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        Icons.Default.Close, 
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-        
-        // Premium color display card with gradient border
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            shape = RoundedCornerShape(20.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Large color preview with shadow effect
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(
-                                color = androidx.compose.ui.graphics.Color(currentColor or 0xFF000000.toInt()),
-                                shape = CircleShape
-                            )
-                            .border(
-                                width = 3.dp,
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                shape = CircleShape
-                            )
-                    )
-                    
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Selected Color",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "#${String.format("%06X", currentColor and 0xFFFFFF)}",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "HSL(${currentHue.toInt()}°, ${(currentSaturation * 100).toInt()}%, ${(currentBrightness * 100).toInt()}%)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Enhanced color sliders with better visual design
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            EnhancedColorSlider(
-                label = "Hue",
-                value = currentHue.toInt(),
-                valueRange = 0f..359f,
-                onValueChange = { currentHue = it },
-                gradientColors = listOf(
-                    Color.Red, Color.Yellow, Color.Green, 
-                    Color.Cyan, Color.Blue, Color.Magenta, Color.Red
-                ),
-                unit = "°"
-            )
-            
-            EnhancedColorSlider(
-                label = "Saturation",
-                value = (currentSaturation * 100).toInt(),
-                valueRange = 0f..100f,
-                onValueChange = { currentSaturation = it / 100f },
-                gradientColors = try {
-                    val validHue = if (currentHue.isNaN()) 0f else currentHue.coerceIn(0f, 359f)
-                    val validBrightness = currentBrightness.coerceIn(0f, 1f)
-                    val color1 = android.graphics.Color.HSVToColor(floatArrayOf(validHue, 0f, validBrightness))
-                    val color2 = android.graphics.Color.HSVToColor(floatArrayOf(validHue, 1f, validBrightness))
-                    listOf(
-                        androidx.compose.ui.graphics.Color(color1 or 0xFF000000.toInt()),
-                        androidx.compose.ui.graphics.Color(color2 or 0xFF000000.toInt())
-                    )
-                } catch (e: Exception) {
-                    listOf(androidx.compose.ui.graphics.Color.Gray, androidx.compose.ui.graphics.Color.Red)
-                },
-                unit = "%"
-            )
-            
-            EnhancedColorSlider(
-                label = "Lightness", 
-                value = (currentBrightness * 100).toInt(),
-                valueRange = 0f..100f,
-                onValueChange = { currentBrightness = it / 100f },
-                gradientColors = try {
-                    val validHue = if (currentHue.isNaN()) 0f else currentHue.coerceIn(0f, 359f)
-                    val validSaturation = currentSaturation.coerceIn(0f, 1f)
-                    val color2 = android.graphics.Color.HSVToColor(floatArrayOf(validHue, validSaturation, 1f))
-                    listOf(
-                        androidx.compose.ui.graphics.Color.Black,
-                        androidx.compose.ui.graphics.Color(color2 or 0xFF000000.toInt())
-                    )
-                } catch (e: Exception) {
-                    listOf(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.graphics.Color.White)
-                },
-                unit = "%"
-            )
-        }
-        
-        // Stylish preset colors section
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = "Color Palette", 
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val presetColors = listOf(
-                    0xFFFFFFFF to "White",
-                    0xFF000000 to "Black", 
-                    0xFFFF6B6B to "Red",
-                    0xFF4ECDC4 to "Teal",
-                    0xFF45B7D1 to "Blue",
-                    0xFF96CEB4 to "Green",
-                    0xFFFECA57 to "Yellow",
-                    0xFFFF9FF3 to "Pink",
-                    0xFFBB6BD9 to "Purple"
-                )
-                
-                items(presetColors.size) { index ->
-                    val (color, name) = presetColors[index]
-                    val isSelected = currentColor.toULong().toLong() == color.toLong()
-                    
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    color = androidx.compose.ui.graphics.Color(color.toInt() or 0xFF000000.toInt()),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .border(
-                                    width = if (isSelected) 3.dp else 2.dp,
-                                    color = if (isSelected) 
-                                        MaterialTheme.colorScheme.primary 
-                                    else 
-                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable {
-                                    try {
-                                        val hsv = FloatArray(3)
-                                        android.graphics.Color.colorToHSV(color.toInt(), hsv)
-                                        currentHue = if (hsv[0].isNaN()) 0f else hsv[0].coerceIn(0f, 359f)
-                                        currentSaturation = hsv[1].coerceIn(0f, 1f)
-                                        currentBrightness = hsv[2].coerceIn(0f, 1f)
-                                    } catch (e: Exception) {
-                                        // Fallback to default values
-                                        currentHue = 0f
-                                        currentSaturation = 1f
-                                        currentBrightness = 1f
-                                    }
-                                }
-                        )
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Premium apply button
-        Button(
-            onClick = { onColorSelected(currentColor.toULong().toLong()) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-        ) {
-            Icon(
-                Icons.Default.Check,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                "Apply Color",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
+
 
 @Composable
 private fun ConnectedButtonGroup(
@@ -1624,73 +1304,7 @@ private fun PulsingSpeedSlider(
     }
 }
 
-@Composable
-private fun HuePicker(
-    selectedColor: Long,
-    onColorSelected: (Long) -> Unit
-) {
-    val density = LocalDensity.current
-    var currentHue by remember {
-        val color = Color(selectedColor)
-        val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(color.value.toInt(), hsv)
-        mutableFloatStateOf(hsv[0])
-    }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Hue bar
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .pointerInput(Unit) {
-                    detectDragGestures { change, _ ->
-                        val x = change.position.x.coerceIn(0f, size.width.toFloat())
-                        val hue = (x / size.width) * 360f
-                        currentHue = hue
-                        val hsvColor = android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f))
-                        onColorSelected(hsvColor.toULong().toLong())
-                    }
-                }
-        ) {
-            val gradient = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Red,
-                    Color.Yellow,
-                    Color.Green,
-                    Color.Cyan,
-                    Color.Blue,
-                    Color.Magenta,
-                    Color.Red
-                )
-            )
-            drawRect(gradient)
-            
-            // Thumb indicator
-            val thumbX = (currentHue / 360f) * size.width
-            drawCircle(
-                color = Color.White,
-                radius = with(density) { 8.dp.toPx() },
-                center = Offset(thumbX, size.height / 2),
-            )
-            drawCircle(
-                color = Color.Black,
-                radius = with(density) { 6.dp.toPx() },
-                center = Offset(thumbX, size.height / 2),
-            )
-        }
-        
-        // Selected color preview
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(selectedColor))
-        ) {}
-    }
-}
 
 @Composable
 private fun AutoSyncIntervalSlider(
@@ -1917,37 +1531,10 @@ private fun LivePreviewClock(
         }
     }
     
-    // Use Material3 color scheme with user preferences (same as PictureInPictureFloatingClock)
-    val accentColor = remember(userPreferences.floatingClockStyle.accentColor, userPreferences.floatingClockStyle.useDynamicColor) {
-        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.accentColor == null) {
-            null // Use default Material 3 primary color
-        } else {
-            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.accentColor!!)
-        }
-    }
-    
-    val primaryColor = accentColor ?: MaterialTheme.colorScheme.primary
-    val passiveColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val defaultSecondaryColor = MaterialTheme.colorScheme.secondary
-    val defaultSurfaceColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)
-    
-    val secondaryAccentColor = remember(userPreferences.floatingClockStyle.secondaryAccentColor, userPreferences.floatingClockStyle.useDynamicColor) {
-        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.secondaryAccentColor == null) {
-            defaultSecondaryColor // Use default Material 3 secondary color
-        } else {
-            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.secondaryAccentColor!!)
-        }
-    }
-    
-    val backgroundColor = remember(userPreferences.floatingClockStyle.backgroundColor, userPreferences.floatingClockStyle.useDynamicColor) {
-        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.backgroundColor == null) {
-            defaultSurfaceColor // Use default Material 3 surface color
-        } else {
-            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.backgroundColor!!)
-        }
-    }
-    
-    val surfaceColor = backgroundColor.copy(alpha = 0.95f)
+    // Use Material3 color scheme (always dynamic)
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryAccentColor = MaterialTheme.colorScheme.secondary
+    val surfaceColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.95f)
     
     Card(
         modifier = Modifier

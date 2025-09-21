@@ -251,24 +251,10 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
         }
     }
     
-    // Use Material3 color scheme with user preferences
-    val accentColor = remember(userPreferences.floatingClockStyle.accentColor, userPreferences.floatingClockStyle.useDynamicColor) {
-        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.accentColor == null) {
-            null // Use default Material 3 primary color
-        } else {
-            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.accentColor!!)
-        }
-    }
-    val primaryColor = accentColor ?: MaterialTheme.colorScheme.primary
+    // Always use Material3 dynamic colors
+    val primaryColor = MaterialTheme.colorScheme.primary
     val passiveColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val customBackground = remember(userPreferences.floatingClockStyle.backgroundColor, userPreferences.floatingClockStyle.useDynamicColor) {
-        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.backgroundColor == null) {
-            null
-        } else {
-            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.backgroundColor!!)
-        }
-    }
-    val surfaceColor = customBackground ?: MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.95f)
+    val surfaceColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.95f)
     
     // Pulsing animation colors
     val pulsingColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)

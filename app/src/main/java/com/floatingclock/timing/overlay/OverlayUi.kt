@@ -55,10 +55,11 @@ fun FloatingOverlaySurface(
 ) {
     val style = state.style
     val colorScheme = MaterialTheme.colorScheme
-    val accentColor = style.accentColor() ?: colorScheme.primary
-    val secondaryAccentColor = style.secondaryAccentColor() ?: colorScheme.secondary
+    // Always use Material 3 dynamic colors
+    val accentColor = colorScheme.primary
+    val secondaryAccentColor = colorScheme.secondary
     val pulseColor = secondaryAccentColor // Use secondary color for pulsing
-    val surfaceColor = style.backgroundColor() ?: colorScheme.surfaceColorAtElevation(6.dp)
+    val surfaceColor = colorScheme.surfaceColorAtElevation(6.dp)
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseFraction by infiniteTransition.animateFloat(
@@ -161,7 +162,7 @@ fun FloatingOverlaySurface(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
                             ),
-                            color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
+                            color = secondaryAccentColor,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -172,7 +173,7 @@ fun FloatingOverlaySurface(
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
                                 ),
-                                color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
+                                color = secondaryAccentColor,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -183,7 +184,7 @@ fun FloatingOverlaySurface(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
                             ),
-                            color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
+                            color = secondaryAccentColor,
                             textAlign = TextAlign.Center
                         )
                         eventInfo?.let { info ->
@@ -192,7 +193,7 @@ fun FloatingOverlaySurface(
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
                                 ),
-                                color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
+                                color = secondaryAccentColor,
                                 textAlign = TextAlign.Center
                             )
                         }
