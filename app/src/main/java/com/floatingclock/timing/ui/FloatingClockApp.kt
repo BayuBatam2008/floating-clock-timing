@@ -39,11 +39,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.PlayArrow
@@ -149,6 +151,10 @@ fun FloatingClockApp(
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Clock) }
     val overlayActive = overlayState.isVisible || viewModel.isOverlayActive()
     
+    // Events state management
+    var eventsSelectionMode by remember { mutableStateOf(false) }
+    var eventsSelectedEvents by remember { mutableStateOf(setOf<String>()) }
+    
     // Track scroll states for FAB visibility
     val clockScrollState = rememberScrollState()
     val eventsScrollState = rememberScrollState()
@@ -210,7 +216,17 @@ fun FloatingClockApp(
                         onStopOverlay = viewModel::hideOverlay,
                         expanded = fabExpanded
                     )
-                    MainTab.Events -> {} // Events screen has its own FAB
+                    MainTab.Events -> EventsFab(
+                        isSelectionMode = eventsSelectionMode,
+                        selectedCount = eventsSelectedEvents.size,
+                        onCreateEvent = { /* TODO: trigger event creation */ },
+                        onDeleteSelected = { 
+                            // TODO: Delete selected events
+                            eventsSelectedEvents = emptySet()
+                            eventsSelectionMode = false
+                        },
+                        expanded = fabExpanded
+                    )
                     MainTab.Sync -> SyncFab(
                         isSyncing = timeState.isSyncing,
                         onSync = viewModel::syncNow,
@@ -242,7 +258,11 @@ fun FloatingClockApp(
                     onClearEvent = viewModel::clearEvent
                 )
                 MainTab.Events -> EventsScreen(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    isSelectionMode = eventsSelectionMode,
+                    selectedEvents = eventsSelectedEvents,
+                    onSelectionModeChange = { eventsSelectionMode = it },
+                    onSelectedEventsChange = { eventsSelectedEvents = it }
                 )
                 MainTab.Sync -> SyncTab(
                     modifier = Modifier
@@ -345,6 +365,51 @@ private fun SyncFab(
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         expanded = expanded
     )
+}
+
+@Composable
+private fun EventsFab(
+    isSelectionMode: Boolean,
+    selectedCount: Int,
+    onCreateEvent: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    expanded: Boolean = true
+) {
+    if (isSelectionMode && selectedCount > 0) {
+        // Delete FAB in selection mode
+        ExtendedFloatingActionButton(
+            text = {
+                Text(text = "Delete ($selectedCount)")
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null
+                )
+            },
+            onClick = onDeleteSelected,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            expanded = expanded
+        )
+    } else if (!isSelectionMode) {
+        // Add Event FAB in normal mode
+        ExtendedFloatingActionButton(
+            text = {
+                Text(text = "Add Event")
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null
+                )
+            },
+            onClick = onCreateEvent,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            expanded = expanded
+        )
+    }
 }
 
 @OptIn(ExperimentalAnimationApi::class)

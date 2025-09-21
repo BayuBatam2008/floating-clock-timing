@@ -1,5 +1,7 @@
 package com.floatingclock.timing.ui.events
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,79 +43,79 @@ fun EventsScreen(
         factory = EventViewModel.Factory(
             (LocalContext.current.applicationContext as FloatingClockApplication).eventRepository
         )
-    )
+    ),
+    isSelectionMode: Boolean = false,
+    selectedEvents: Set<String> = emptySet(),
+    onSelectionModeChange: (Boolean) -> Unit = {},
+    onSelectedEventsChange: (Set<String>) -> Unit = {}
 ) {
     val events by eventViewModel.events.collectAsState(initial = emptyList())
     val showEventDialog by eventViewModel.showEventDialog.collectAsState()
-    var isSelectionMode by remember { mutableStateOf(false) }
-    var selectedEvents by remember { mutableStateOf(setOf<String>()) }
     
-    Scaffold(
-        floatingActionButton = {
-            EventFabMenu(
-                isSelectionMode = isSelectionMode,
-                selectedCount = selectedEvents.size,
-                onAddEvent = { eventViewModel.showCreateEventDialog() },
-                onSelectMode = { 
-                    isSelectionMode = true 
-                    selectedEvents = emptySet()
-                },
-                onDeleteSelected = { 
-                    selectedEvents.forEach { eventId ->
-                        eventViewModel.deleteEvent(eventId)
-                    }
-                    selectedEvents = emptySet()
-                    isSelectionMode = false
-                },
-                onCancel = { 
-                    isSelectionMode = false 
-                    selectedEvents = emptySet()
-                }
-            )
-        },
-        modifier = modifier
-    ) { paddingValues ->
-        if (events.isEmpty()) {
-            EmptyEventsState(
-                onCreateEvent = { eventViewModel.showCreateEventDialog() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(events) { event ->
-                    EventCard(
-                        event = event,
-                        isSelectionMode = isSelectionMode,
-                        isSelected = selectedEvents.contains(event.id),
-                        onToggleEnabled = { eventViewModel.toggleEventEnabled(event.id) },
-                        onEdit = { eventViewModel.showEditEventDialog(event) },
-                        onDelete = { eventViewModel.deleteEvent(event.id) },
-                        onSelect = { 
-                            selectedEvents = if (selectedEvents.contains(event.id)) {
-                                selectedEvents - event.id
-                            } else {
-                                selectedEvents + event.id
-                            }
-                        },
-                        onLongPress = {
-                            isSelectionMode = true
-                            selectedEvents = setOf(event.id)
+    // Use external selection state
+    var internalSelectionMode by remember { mutableStateOf(isSelectionMode) }
+    var internalSelectedEvents by remember { mutableStateOf(selectedEvents) }
+    
+    // Sync external state changes
+    LaunchedEffect(isSelectionMode) {
+        internalSelectionMode = isSelectionMode
+    }
+    
+    LaunchedEffect(selectedEvents) {
+        internalSelectedEvents = selectedEvents
+    }
+    
+    // Auto-exit selection mode when no items are selected
+    LaunchedEffect(internalSelectedEvents) {
+        if (internalSelectionMode && internalSelectedEvents.isEmpty()) {
+            internalSelectionMode = false
+            onSelectionModeChange(false)
+        }
+    }
+    
+    if (events.isEmpty()) {
+        EmptyEventsState(
+            onCreateEvent = { eventViewModel.showCreateEventDialog() },
+            modifier = Modifier.fillMaxSize()
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(events) { event ->
+                EventCard(
+                    event = event,
+                    isSelectionMode = internalSelectionMode,
+                    isSelected = internalSelectedEvents.contains(event.id),
+                    onToggleEnabled = { eventViewModel.toggleEventEnabled(event.id) },
+                    onEdit = { eventViewModel.showEditEventDialog(event) },
+                    onDelete = { eventViewModel.deleteEvent(event.id) },
+                    onSelect = { 
+                        val newSelectedEvents = if (internalSelectedEvents.contains(event.id)) {
+                            internalSelectedEvents - event.id
+                        } else {
+                            internalSelectedEvents + event.id
                         }
-                    )
-                }
-                
-                // Add some bottom padding for FAB
-                item {
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
+                        internalSelectedEvents = newSelectedEvents
+                        onSelectedEventsChange(newSelectedEvents)
+                    },
+                    onLongPress = {
+                        internalSelectionMode = true
+                        val newSelectedEvents = setOf(event.id)
+                        internalSelectedEvents = newSelectedEvents
+                        onSelectionModeChange(true)
+                        onSelectedEventsChange(newSelectedEvents)
+                    }
+                )
+            }
+            
+            // Add some bottom padding for FAB
+            item {
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
@@ -204,6 +208,25 @@ private fun EventCard(
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Selection mode checkbox on the left
+            AnimatedVisibility(
+                visible = isSelectionMode,
+                enter = slideInHorizontally(animationSpec = tween(300)) + fadeIn(),
+                exit = slideOutHorizontally(animationSpec = tween(300)) + fadeOut()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onSelect() },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            uncheckedColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
+            }
+            
             // Event details
             Column(
                 modifier = Modifier.weight(1f)
@@ -212,7 +235,7 @@ private fun EventCard(
                 Text(
                     text = event.getFormattedTime(),
                     style = MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = 40.sp,
+                        fontSize = 28.sp,
                         fontWeight = if (event.isEnabled) FontWeight.Bold else FontWeight.Light
                     ),
                     color = if (event.isEnabled) 
@@ -226,7 +249,7 @@ private fun EventCard(
                 // Event name
                 Text(
                     text = event.name,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = if (event.isEnabled) 
                         MaterialTheme.colorScheme.onSecondaryContainer
                     else 
@@ -247,21 +270,6 @@ private fun EventCard(
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
-                // Description (if present)
-                if (event.description.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = event.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (event.isEnabled)
-                            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
             
             Spacer(modifier = Modifier.width(16.dp))
@@ -277,103 +285,6 @@ private fun EventCard(
                     uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
-        }
-    }
-}
-
-@Composable
-fun EventFabMenu(
-    isSelectionMode: Boolean,
-    selectedCount: Int,
-    onAddEvent: () -> Unit,
-    onSelectMode: () -> Unit,
-    onDeleteSelected: () -> Unit,
-    onCancel: () -> Unit
-) {
-    var fabExpanded by remember { mutableStateOf(false) }
-    
-    if (isSelectionMode) {
-        // Selection mode FABs
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Cancel selection button
-            SmallFloatingActionButton(
-                onClick = onCancel,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Cancel,
-                    contentDescription = "Cancel selection"
-                )
-            }
-            
-            // Delete selected button
-            if (selectedCount > 0) {
-                SmallFloatingActionButton(
-                    onClick = onDeleteSelected,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete selected ($selectedCount)"
-                    )
-                }
-            }
-        }
-    } else {
-        // Normal mode FAB Menu
-        Column(
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Extended FAB options (show when expanded)
-            if (fabExpanded) {
-                // Add Event FAB
-                SmallFloatingActionButton(
-                    onClick = {
-                        onAddEvent()
-                        fabExpanded = false
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add event"
-                    )
-                }
-                
-                // Select Mode FAB
-                SmallFloatingActionButton(
-                    onClick = {
-                        onSelectMode()
-                        fabExpanded = false
-                    },
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SelectAll,
-                        contentDescription = "Select events"
-                    )
-                }
-            }
-            
-            // Main FAB with pencil icon
-            FloatingActionButton(
-                onClick = { fabExpanded = !fabExpanded },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Menu"
-                )
-            }
         }
     }
 }

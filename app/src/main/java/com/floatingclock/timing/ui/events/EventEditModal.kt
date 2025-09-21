@@ -1,328 +1,196 @@
 package com.floatingclock.timing.ui.events
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
-import com.floatingclock.timing.FloatingClockApplication
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventEditModal(
     eventViewModel: EventViewModel,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
+    // Collect individual states instead of uiState
     val eventName by eventViewModel.eventName.collectAsState()
-    val eventDescription by eventViewModel.eventDescription.collectAsState()
+    val selectedDate by eventViewModel.selectedDate.collectAsState()
     val soundEnabled by eventViewModel.soundEnabled.collectAsState()
     val vibrationEnabled by eventViewModel.vibrationEnabled.collectAsState()
-    val selectedDate by eventViewModel.selectedDate.collectAsState()
-    val currentTimeInput by eventViewModel.currentTimeInput.collectAsState()
-    val editingEvent by eventViewModel.editingEvent.collectAsState()
-    val isLoading by eventViewModel.isLoading.collectAsState()
-    
-    var showDatePicker by remember { mutableStateOf(false) }
-    
+    val timeInput by eventViewModel.currentTimeInput.collectAsState()
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        modifier = modifier,
         dragHandle = {
-            Surface(
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(2.dp)
-            ) {
-                Box(modifier = Modifier.size(width = 32.dp, height = 4.dp))
-            }
+            Box(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .size(width = 32.dp, height = 4.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        RoundedCornerShape(2.dp)
+                    )
+            )
         }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // Header
+        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+            // Header with close button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (editingEvent != null) "Edit Event" else "Create Event",
+                    text = "New Event",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                shape = CircleShape
-                            )
-                    ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Cancel",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    
-                    IconButton(
-                        onClick = { eventViewModel.saveEvent() },
-                        enabled = !isLoading,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape
-                            )
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = "Save",
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    }
-                }
-            }
-            
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            
-            // Event Name Input
-            OutlinedTextField(
-                value = eventName,
-                onValueChange = { eventViewModel.updateEventName(it) },
-                label = { Text("Event name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            
-            // Date Selection
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDatePicker = true },
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "Date",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = selectedDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                IconButton(onClick = onDismiss) {
                     Icon(
-                        Icons.Default.DateRange,
-                        contentDescription = "Select date",
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            
-            // Time Input Section - Using floating clock style
-            Card(
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Event Name Input
+            OutlinedTextField(
+                value = eventName,
+                onValueChange = { eventViewModel.updateEventName(it) },
+                label = { Text("Event Name") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                shape = MaterialTheme.shapes.medium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Date Selection
+            Card(
+                onClick = { showDatePicker = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Target Time",
+                        text = "Date",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = selectedDate.toString(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Time Input Section with EXACT COPY from FloatingClockApp
+            TimeInputScheduleSection(
+                selectedDate = selectedDate,
+                currentTimeInput = timeInput,
+                eventViewModel = eventViewModel
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Sound and Vibration Settings
+            Card(
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Alert Settings",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
                     
-                    // Interactive time display style (like floating clock)
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp), 
-                                RoundedCornerShape(24.dp)
-                            )
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val paddedInput = currentTimeInput.padStart(9, '0')
-                        val hours = paddedInput.substring(0, 2)
-                        val minutes = paddedInput.substring(2, 4)
-                        val seconds = paddedInput.substring(4, 6)
-                        val millis = paddedInput.substring(6, 9)
-                        
-                        // Hours
-                        TimeSegment(value = hours, label = "h")
-                        
-                        // Minutes
-                        TimeSegment(value = minutes, label = "m")
-                        
-                        // Seconds
-                        TimeSegment(value = seconds, label = "s")
-                        
-                        // Milliseconds
-                        TimeSegment(value = millis, label = "ms")
+                        Text(
+                            text = "Sound",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Switch(
+                            checked = soundEnabled,
+                            onCheckedChange = { eventViewModel.updateSoundEnabled(it) }
+                        )
                     }
                     
-                    // Simple input controls
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = { eventViewModel.clearTimeInput() },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Clear")
-                        }
-                        
-                        OutlinedButton(
-                            onClick = { eventViewModel.removeLastTimeDigit() },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Backspace,
-                                contentDescription = "Backspace",
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                    
-                    // Number pad for input
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.height(160.dp)
-                    ) {
-                        items(listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "")) { digit ->
-                            if (digit.isNotEmpty()) {
-                                OutlinedButton(
-                                    onClick = { eventViewModel.appendTimeDigit(digit) },
-                                    modifier = Modifier.aspectRatio(1f)
-                                ) {
-                                    Text(
-                                        text = digit,
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            text = "Vibration",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Switch(
+                            checked = vibrationEnabled,
+                            onCheckedChange = { eventViewModel.updateVibrationEnabled(it) }
+                        )
                     }
                 }
             }
-            
-            // Description Input
-            OutlinedTextField(
-                value = eventDescription,
-                onValueChange = { eventViewModel.updateEventDescription(it) },
-                label = { Text("Description (optional)") },
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Save Button with proper spacing
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                maxLines = 3
-            )
-            
-            // Sound and Vibration Settings
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Notifications",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Text(
-                        text = "Sound",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Switch(
-                        checked = soundEnabled,
-                        onCheckedChange = { eventViewModel.updateSoundEnabled(it) }
-                    )
+                    Text("Cancel")
                 }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Button(
+                    onClick = {
+                        eventViewModel.saveEvent()
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Text(
-                        text = "Vibration",
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Switch(
-                        checked = vibrationEnabled,
-                        onCheckedChange = { eventViewModel.updateVibrationEnabled(it) }
-                    )
+                    Text("Save Event")
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
     
     // Date Picker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate.toEpochDay() * 24 * 60 * 60 * 1000
+            initialSelectedDateMillis = selectedDate.toEpochDay() * 24L * 60L * 60L * 1000L
         )
         
         DatePickerDialog(
@@ -331,7 +199,7 @@ fun EventEditModal(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            val date = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
+                            val date = LocalDate.ofEpochDay(millis / (24L * 60L * 60L * 1000L))
                             eventViewModel.updateSelectedDate(date)
                         }
                         showDatePicker = false
@@ -352,185 +220,379 @@ fun EventEditModal(
 }
 
 @Composable
-private fun TimeInputSection(
+private fun TimeInputScheduleSection(
+    selectedDate: LocalDate,
     currentTimeInput: String,
-    onDigitClick: (String) -> Unit,
-    onBackspace: () -> Unit,
-    onClear: () -> Unit,
+    eventViewModel: EventViewModel,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = "Target Time",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
-        )
-        
-        // Time Display
-        TimeDisplay(timeInput = currentTimeInput)
-        
-        // Keypad
-        TimeKeypad(
-            onDigitClick = onDigitClick,
-            onBackspace = onBackspace,
-            onClear = onClear
-        )
-    }
-}
-
-@Composable
-private fun TimeDisplay(
-    timeInput: String,
-    modifier: Modifier = Modifier
-) {
-    val paddedInput = timeInput.padStart(9, '0')
-    val hours = paddedInput.substring(0, 2)
-    val minutes = paddedInput.substring(2, 4)
-    val seconds = paddedInput.substring(4, 6)
-    val millis = paddedInput.substring(6, 9)
+    // State for absolute time input (like alarm clock) - parse from currentTimeInput
+    var selectedSegment by rememberSaveable { mutableStateOf(0) } // 0=hours, 1=minutes, 2=seconds, 3=millis
     
+    // Parse current time input
+    val paddedInput = currentTimeInput.padStart(9, '0')
+    var hours by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(0, 2).toIntOrNull() ?: 0) }
+    var minutes by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(2, 4).toIntOrNull() ?: 0) }
+    var seconds by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(4, 6).toIntOrNull() ?: 0) }
+    var millis by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(6, 9).toIntOrNull() ?: 0) }
+    
+    // Update eventViewModel when values change
+    LaunchedEffect(hours, minutes, seconds, millis) {
+        val timeString = "%02d%02d%02d%03d".format(hours, minutes, seconds, millis)
+        eventViewModel.updateTimeInput(timeString)
+    }
+
     Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Target Time",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(text = "Target Time", style = MaterialTheme.typography.titleMedium)
+
+            // Interactive Time Display with highlighting - EXACT COPY
+            EventInteractiveTimeDisplay(
+                hours = hours,
+                minutes = minutes,
+                seconds = seconds,
+                millis = millis,
+                selectedSegment = selectedSegment,
+                onSegmentClick = { segment -> selectedSegment = segment }
             )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = "$hours:$minutes:$seconds.$millis",
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Light
-                ),
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center
+
+            // Quick time buttons (set to common times)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val quickTimes = remember { 
+                    listOf(
+                        Triple(6, 0, "6:00"),
+                        Triple(7, 30, "7:30"),
+                        Triple(12, 0, "12:00"),
+                        Triple(18, 0, "18:00")
+                    )
+                }
+                quickTimes.forEach { (h, m, label) ->
+                    AssistChip(
+                        onClick = {
+                            hours = h
+                            minutes = m
+                            seconds = 0
+                            millis = 0
+                        },
+                        label = { Text(text = label) }
+                    )
+                }
+            }
+
+            // Interactive Keypad for editing selected segment - EXACT COPY
+            EventInteractiveKeypad(
+                selectedSegment = selectedSegment,
+                hours = hours,
+                minutes = minutes,
+                seconds = seconds,
+                millis = millis,
+                onHoursChange = { hours = it.coerceIn(0, 23) },
+                onMinutesChange = { minutes = it.coerceIn(0, 59) },
+                onSecondsChange = { seconds = it.coerceIn(0, 59) },
+                onMillisChange = { millis = it.coerceIn(0, 999) }
             )
         }
     }
 }
 
+// EXACT COPY of InteractiveTimeDisplay from FloatingClockApp
 @Composable
-private fun TimeKeypad(
-    onDigitClick: (String) -> Unit,
-    onBackspace: () -> Unit,
-    onClear: () -> Unit,
+private fun EventInteractiveTimeDisplay(
+    hours: Int,
+    minutes: Int,
+    seconds: Int,
+    millis: Int,
+    selectedSegment: Int,
+    onSegmentClick: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp), RoundedCornerShape(24.dp))
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Hours segment (0)
+        EventInteractiveTimeSegment(
+            value = "%02d".format(hours),
+            label = "h",
+            isSelected = selectedSegment == 0,
+            onClick = { onSegmentClick(0) }
+        )
+        
+        // Minutes segment (1)
+        EventInteractiveTimeSegment(
+            value = "%02d".format(minutes),
+            label = "m",
+            isSelected = selectedSegment == 1,
+            onClick = { onSegmentClick(1) }
+        )
+        
+        // Seconds segment (2)
+        EventInteractiveTimeSegment(
+            value = "%02d".format(seconds),
+            label = "s",
+            isSelected = selectedSegment == 2,
+            onClick = { onSegmentClick(2) }
+        )
+        
+        // Milliseconds segment (3)
+        EventInteractiveTimeSegment(
+            value = "%03d".format(millis),
+            label = "ms",
+            isSelected = selectedSegment == 3,
+            onClick = { onSegmentClick(3) }
+        )
+    }
+}
+
+// EXACT COPY of InteractiveTimeSegment from FloatingClockApp
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun EventInteractiveTimeSegment(
+    value: String,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val animatedBackground by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(200),
+        label = "background_color"
+    )
+    
+    val animatedContentColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
+        animationSpec = tween(200),
+        label = "content_color"
+    )
+
+    val animatedLabelColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(200),
+        label = "label_color"
+    )
+
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(animatedBackground)
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        // Number grid (1-9, 0)
-        val digits = listOf(
+        AnimatedContent(
+            targetState = value,
+            transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(120)) },
+            label = "segment$value"
+        ) { displayValue ->
+            Text(
+                text = displayValue,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                ),
+                color = animatedContentColor
+            )
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = animatedLabelColor
+        )
+    }
+}
+
+// EXACT COPY of InteractiveKeypad from FloatingClockApp  
+@Composable
+private fun EventInteractiveKeypad(
+    selectedSegment: Int,
+    hours: Int,
+    minutes: Int,
+    seconds: Int,
+    millis: Int,
+    onHoursChange: (Int) -> Unit,
+    onMinutesChange: (Int) -> Unit,
+    onSecondsChange: (Int) -> Unit,
+    onMillisChange: (Int) -> Unit
+) {
+    // State for editing the current segment as string for easier input handling
+    var editingValue by rememberSaveable(selectedSegment) { 
+        mutableStateOf(
+            when (selectedSegment) {
+                0 -> hours.toString()
+                1 -> minutes.toString()
+                2 -> seconds.toString()
+                3 -> millis.toString()
+                else -> "0"
+            }
+        )
+    }
+
+    // Update editing value when selected segment changes
+    LaunchedEffect(selectedSegment, hours, minutes, seconds, millis) {
+        editingValue = when (selectedSegment) {
+            0 -> hours.toString()
+            1 -> minutes.toString()
+            2 -> seconds.toString()
+            3 -> millis.toString()
+            else -> "0"
+        }
+    }
+
+    // Function to handle value input for the selected segment
+    fun updateSelectedSegment(newValue: String) {
+        editingValue = newValue
+        val intValue = newValue.toIntOrNull() ?: 0
+        
+        when (selectedSegment) {
+            0 -> onHoursChange(intValue.coerceIn(0, 23))
+            1 -> onMinutesChange(intValue.coerceIn(0, 59))
+            2 -> onSecondsChange(intValue.coerceIn(0, 59))
+            3 -> onMillisChange(intValue.coerceIn(0, 999))
+        }
+    }
+
+    // Optimized keypad with remember for static data
+    val keypadRows = remember {
+        listOf(
             listOf("1", "2", "3"),
             listOf("4", "5", "6"),
             listOf("7", "8", "9"),
-            listOf("C", "0", "⌫")
+            listOf("Reset", "0", "⌫")
         )
-        
-        digits.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                row.forEach { digit ->
-                    KeypadButton(
-                        text = digit,
-                        onClick = {
-                            when (digit) {
-                                "C" -> onClear()
-                                "⌫" -> onBackspace()
-                                else -> onDigitClick(digit)
-                            }
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Display current editing segment info
+        Text(
+            text = when (selectedSegment) {
+                0 -> "Editing Hours (0-23)"
+                1 -> "Editing Minutes (0-59)"
+                2 -> "Editing Seconds (0-59)"
+                3 -> "Editing Milliseconds (0-999)"
+                else -> "Select a time segment"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+
+        keypadRows.forEachIndexed { rowIndex, row ->
+            key(rowIndex) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    row.forEachIndexed { keyIndex, key ->
+                        key("$rowIndex-$keyIndex") {
+                            EventInteractiveKeypadButton(
+                                modifier = Modifier.weight(1f),
+                                label = key,
+                                onClick = {
+                                    when (key) {
+                                        "⌫" -> {
+                                            if (editingValue.isNotEmpty()) {
+                                                val newValue = editingValue.dropLast(1)
+                                                updateSelectedSegment(if (newValue.isEmpty()) "0" else newValue)
+                                            }
+                                        }
+                                        "Reset" -> {
+                                            // Clear all time input values
+                                            onHoursChange(0)
+                                            onMinutesChange(0)
+                                            onSecondsChange(0)
+                                            onMillisChange(0)
+                                            editingValue = "0"
+                                        }
+                                        else -> {
+                                            val maxLength = when (selectedSegment) {
+                                                0, 1, 2 -> 2  // Hours, minutes, seconds: max 2 digits
+                                                3 -> 3        // Milliseconds: max 3 digits
+                                                else -> 2
+                                            }
+                                            
+                                            val maxValue = when (selectedSegment) {
+                                                0 -> 23  // Hours: 0-23
+                                                1, 2 -> 59  // Minutes, seconds: 0-59
+                                                3 -> 999  // Milliseconds: 0-999
+                                                else -> 23
+                                            }
+                                            
+                                            // Build new value
+                                            val newValue = if (editingValue == "0") {
+                                                key
+                                            } else {
+                                                val candidate = (editingValue + key).take(maxLength)
+                                                val candidateInt = candidate.toIntOrNull() ?: 0
+                                                if (candidateInt <= maxValue) {
+                                                    candidate
+                                                } else {
+                                                    editingValue // Keep old value if exceeds max
+                                                }
+                                            }
+                                            
+                                            updateSelectedSegment(newValue)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+// EXACT COPY of InteractiveKeypadButton from FloatingClockApp
 @Composable
-private fun KeypadButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+private fun EventInteractiveKeypadButton(
+    modifier: Modifier = Modifier,
+    label: String,
+    onClick: () -> Unit
 ) {
-    val isSpecial = text == "C" || text == "⌫"
+    val isSpecial = label in listOf("Reset", "⌫")
     
     Button(
         onClick = onClick,
-        modifier = modifier
-            .aspectRatio(1f)
-            .clip(CircleShape),
+        modifier = modifier.height(48.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSpecial) 
-                MaterialTheme.colorScheme.surfaceVariant 
-            else 
-                MaterialTheme.colorScheme.surfaceContainerHighest,
-            contentColor = if (isSpecial) 
-                MaterialTheme.colorScheme.onSurfaceVariant 
-            else 
-                MaterialTheme.colorScheme.onSurface
+            containerColor = if (isSpecial) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            contentColor = if (isSpecial) {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.onPrimary
+            }
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
-        if (text == "⌫") {
-            Icon(
-                Icons.AutoMirrored.Filled.Backspace,
-                contentDescription = "Backspace",
-                modifier = Modifier.size(20.dp)
-            )
-        } else {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = if (isSpecial) FontWeight.Medium else FontWeight.Normal
-            )
-        }
-    }
-}
-
-@Composable
-private fun TimeSegment(
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-    ) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Medium
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = FontWeight.Medium
+            )
         )
     }
 }

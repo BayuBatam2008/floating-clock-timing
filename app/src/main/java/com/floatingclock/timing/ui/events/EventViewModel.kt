@@ -106,6 +106,10 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         _selectedDate.value = date
     }
     
+    fun updateTimeInput(timeInput: String) {
+        _currentTimeInput.value = timeInput
+    }
+    
     fun appendTimeDigit(digit: String) {
         val current = _currentTimeInput.value
         if (current.length < 9) {
