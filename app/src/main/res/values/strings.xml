@@ -3,6 +3,7 @@
     <string name="tab_clock">Floating Clock</string>
     <string name="tab_settings">Sync</string>
     <string name="tab_customization">Customization</string>
+    <string name="tab_events">Events</string>
     <string name="start_overlay">Launch floating clock</string>
     <string name="stop_overlay">Close floating clock</string>
     <string name="schedule_event">Schedule event</string>

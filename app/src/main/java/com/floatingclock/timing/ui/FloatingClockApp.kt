@@ -44,6 +44,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Stop
@@ -116,6 +118,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.floatingclock.timing.MainViewModel
 import com.floatingclock.timing.R
+import com.floatingclock.timing.ui.events.EventsScreen
 import com.floatingclock.timing.data.TimeSyncState
 import com.floatingclock.timing.data.model.FloatingClockStyle
 import com.floatingclock.timing.data.model.UserPreferences
@@ -148,11 +151,13 @@ fun FloatingClockApp(
     
     // Track scroll states for FAB visibility
     val clockScrollState = rememberScrollState()
+    val eventsScrollState = rememberScrollState()
     val syncScrollState = rememberScrollState()
     val styleScrollState = rememberScrollState()
     
     val currentScrollState = when (selectedTab) {
         MainTab.Clock -> clockScrollState
+        MainTab.Events -> eventsScrollState
         MainTab.Sync -> syncScrollState
         MainTab.Style -> styleScrollState
     }
@@ -205,6 +210,7 @@ fun FloatingClockApp(
                         onStopOverlay = viewModel::hideOverlay,
                         expanded = fabExpanded
                     )
+                    MainTab.Events -> {} // Events screen has its own FAB
                     MainTab.Sync -> SyncFab(
                         isSyncing = timeState.isSyncing,
                         onSync = viewModel::syncNow,
@@ -235,6 +241,9 @@ fun FloatingClockApp(
                     onScheduleEvent = viewModel::scheduleEvent,
                     onClearEvent = viewModel::clearEvent
                 )
+                MainTab.Events -> EventsScreen(
+                    modifier = Modifier.fillMaxSize()
+                )
                 MainTab.Sync -> SyncTab(
                     modifier = Modifier
                         .fillMaxSize()
@@ -260,6 +269,7 @@ fun FloatingClockApp(
 
 enum class MainTab(val titleRes: Int, val icon: ImageVector) {
     Clock(R.string.tab_clock, Icons.Default.Schedule),
+    Events(R.string.tab_events, Icons.Default.Event),
     Sync(R.string.tab_settings, Icons.Default.Cloud),
     Style(R.string.tab_customization, Icons.Default.ColorLens)
 }
