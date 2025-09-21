@@ -88,17 +88,23 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -122,6 +128,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -1172,37 +1179,6 @@ private fun CustomizationTab(
                         "NONE" to "None"
                     )
                 )
-                
-                AnimatedVisibility(visible = !style.useDynamicColor, enter = fadeIn(), exit = fadeOut()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(text = stringResource(id = R.string.accent_color), style = MaterialTheme.typography.titleSmall)
-                        ColorPickerButton(
-                            selectedColor = style.accentColor ?: 0xFF3DDC84,
-                            onColorSelected = { colorLong ->
-                                viewModel.updateStyle { it.copy(accentColor = colorLong) }
-                            },
-                            label = "Accent Color"
-                        )
-                        
-                        Text(text = "Secondary Accent Color", style = MaterialTheme.typography.titleSmall)
-                        ColorPickerButton(
-                            selectedColor = style.secondaryAccentColor ?: 0xFF03DAC6,
-                            onColorSelected = { colorLong ->
-                                viewModel.updateStyle { it.copy(secondaryAccentColor = colorLong) }
-                            },
-                            label = "Secondary Accent"
-                        )
-                        
-                        Text(text = "Background Color", style = MaterialTheme.typography.titleSmall)
-                        ColorPickerButton(
-                            selectedColor = style.backgroundColor ?: 0xFF121212,
-                            onColorSelected = { colorLong ->
-                                viewModel.updateStyle { it.copy(backgroundColor = colorLong) }
-                            },
-                            label = "Background"
-                        )
-                    }
-                }
             }
         }
 
@@ -1217,165 +1193,55 @@ private fun CustomizationTab(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColorPickerButton(
-    selectedColor: Long,
-    onColorSelected: (Long) -> Unit,
-    label: String
-) {
-    var showBottomSheet by remember { mutableStateOf(false) }
-    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    
-    OutlinedButton(
-        onClick = { showBottomSheet = true },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .background(
-                        color = Color(selectedColor),
-                        shape = CircleShape
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = CircleShape
-                    )
-            )
-            Text(text = label)
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "#${selectedColor.toString(16).uppercase().takeLast(6)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-    
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = bottomSheetState
-        ) {
-            ColorPickerBottomSheet(
-                selectedColor = selectedColor,
-                onColorSelected = { color ->
-                    onColorSelected(color)
-                    showBottomSheet = false
-                },
-                onDismiss = { showBottomSheet = false }
-            )
-        }
-    }
-}
-
-@Composable
-private fun EnhancedColorSlider(
-    label: String,
-    value: Int,
-    valueRange: ClosedFloatingPointRange<Float>,
-    onValueChange: (Float) -> Unit,
-    gradientColors: List<Color>,
-    unit: String = ""
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "$value$unit",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .background(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
-            )
-        }
-        
-        // Enhanced slider track with gradient background
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-        ) {
-            // Gradient track background
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.horizontalGradient(gradientColors),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-            )
-            
-            // Custom slider
-            Slider(
-                value = value.toFloat(),
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.surface,
-                    activeTrackColor = Color.Transparent,
-                    inactiveTrackColor = Color.Transparent
-                )
-            )
-        }
-    }
-}
-
-@Composable
 private fun ColorPickerBottomSheet(
     selectedColor: Long,
+    bottomSheetState: androidx.compose.material3.SheetState,
     onColorSelected: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var currentHue by remember {
-        val color = Color(selectedColor)
+    // Safe color conversion with proper validation
+    val safeSelectedColor = (selectedColor and 0xFFFFFFFF).toInt()
+    val coroutineScope = rememberCoroutineScope()
+    
+    var currentHue by remember(selectedColor) {
         val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(color.value.toInt(), hsv)
-        mutableFloatStateOf(hsv[0])
+        try {
+            android.graphics.Color.colorToHSV(safeSelectedColor, hsv)
+            mutableFloatStateOf(if (hsv[0].isNaN()) 0f else hsv[0])
+        } catch (e: Exception) {
+            mutableFloatStateOf(0f)
+        }
     }
     
-    var currentSaturation by remember {
-        val color = Color(selectedColor)
+    var currentSaturation by remember(selectedColor) {
         val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(color.value.toInt(), hsv)
-        mutableFloatStateOf(hsv[1])
+        try {
+            android.graphics.Color.colorToHSV(safeSelectedColor, hsv)
+            mutableFloatStateOf(hsv[1].coerceIn(0f, 1f))
+        } catch (e: Exception) {
+            mutableFloatStateOf(1f)
+        }
     }
     
-    var currentBrightness by remember {
-        val color = Color(selectedColor)
+    var currentBrightness by remember(selectedColor) {
         val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(color.value.toInt(), hsv)
-        mutableFloatStateOf(hsv[2])
+        try {
+            android.graphics.Color.colorToHSV(safeSelectedColor, hsv)
+            mutableFloatStateOf(hsv[2].coerceIn(0f, 1f))
+        } catch (e: Exception) {
+            mutableFloatStateOf(1f)
+        }
     }
     
     val currentColor = remember(currentHue, currentSaturation, currentBrightness) {
-        android.graphics.Color.HSVToColor(floatArrayOf(currentHue, currentSaturation, currentBrightness))
+        try {
+            val validHue = if (currentHue.isNaN()) 0f else currentHue.coerceIn(0f, 359f)
+            val validSaturation = currentSaturation.coerceIn(0f, 1f)
+            val validBrightness = currentBrightness.coerceIn(0f, 1f)
+            android.graphics.Color.HSVToColor(floatArrayOf(validHue, validSaturation, validBrightness))
+        } catch (e: Exception) {
+            android.graphics.Color.WHITE
+        }
     }
     
     Column(
@@ -1390,17 +1256,6 @@ private fun ColorPickerBottomSheet(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Stylish handle indicator
-            Box(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(2.dp)
-                    )
-            )
-            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1413,7 +1268,13 @@ private fun ColorPickerBottomSheet(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 IconButton(
-                    onClick = onDismiss,
+                    onClick = {
+                        // Use the same animation as swipe down
+                        coroutineScope.launch {
+                            bottomSheetState.hide()
+                        }
+                        onDismiss()
+                    },
                     modifier = Modifier
                         .size(40.dp)
                         .background(
@@ -1456,7 +1317,7 @@ private fun ColorPickerBottomSheet(
                         modifier = Modifier
                             .size(64.dp)
                             .background(
-                                color = Color(currentColor.toULong()),
+                                color = androidx.compose.ui.graphics.Color(currentColor or 0xFF000000.toInt()),
                                 shape = CircleShape
                             )
                             .border(
@@ -1474,7 +1335,7 @@ private fun ColorPickerBottomSheet(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "#${currentColor.toString(16).uppercase().takeLast(6)}",
+                            text = "#${String.format("%06X", currentColor and 0xFFFFFF)}",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -1508,10 +1369,18 @@ private fun ColorPickerBottomSheet(
                 value = (currentSaturation * 100).toInt(),
                 valueRange = 0f..100f,
                 onValueChange = { currentSaturation = it / 100f },
-                gradientColors = listOf(
-                    Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, 0f, currentBrightness))),
-                    Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, 1f, currentBrightness)))
-                ),
+                gradientColors = try {
+                    val validHue = if (currentHue.isNaN()) 0f else currentHue.coerceIn(0f, 359f)
+                    val validBrightness = currentBrightness.coerceIn(0f, 1f)
+                    val color1 = android.graphics.Color.HSVToColor(floatArrayOf(validHue, 0f, validBrightness))
+                    val color2 = android.graphics.Color.HSVToColor(floatArrayOf(validHue, 1f, validBrightness))
+                    listOf(
+                        androidx.compose.ui.graphics.Color(color1 or 0xFF000000.toInt()),
+                        androidx.compose.ui.graphics.Color(color2 or 0xFF000000.toInt())
+                    )
+                } catch (e: Exception) {
+                    listOf(androidx.compose.ui.graphics.Color.Gray, androidx.compose.ui.graphics.Color.Red)
+                },
                 unit = "%"
             )
             
@@ -1520,10 +1389,17 @@ private fun ColorPickerBottomSheet(
                 value = (currentBrightness * 100).toInt(),
                 valueRange = 0f..100f,
                 onValueChange = { currentBrightness = it / 100f },
-                gradientColors = listOf(
-                    Color.Black,
-                    Color(android.graphics.Color.HSVToColor(floatArrayOf(currentHue, currentSaturation, 1f)))
-                ),
+                gradientColors = try {
+                    val validHue = if (currentHue.isNaN()) 0f else currentHue.coerceIn(0f, 359f)
+                    val validSaturation = currentSaturation.coerceIn(0f, 1f)
+                    val color2 = android.graphics.Color.HSVToColor(floatArrayOf(validHue, validSaturation, 1f))
+                    listOf(
+                        androidx.compose.ui.graphics.Color.Black,
+                        androidx.compose.ui.graphics.Color(color2 or 0xFF000000.toInt())
+                    )
+                } catch (e: Exception) {
+                    listOf(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.graphics.Color.White)
+                },
                 unit = "%"
             )
         }
@@ -1565,7 +1441,7 @@ private fun ColorPickerBottomSheet(
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
-                                    color = Color(color),
+                                    color = androidx.compose.ui.graphics.Color(color.toInt() or 0xFF000000.toInt()),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .border(
@@ -1577,11 +1453,18 @@ private fun ColorPickerBottomSheet(
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable {
-                                    val hsv = FloatArray(3)
-                                    android.graphics.Color.colorToHSV(color.toInt(), hsv)
-                                    currentHue = hsv[0].takeIf { !it.isNaN() } ?: 0f
-                                    currentSaturation = hsv[1]
-                                    currentBrightness = hsv[2]
+                                    try {
+                                        val hsv = FloatArray(3)
+                                        android.graphics.Color.colorToHSV(color.toInt(), hsv)
+                                        currentHue = if (hsv[0].isNaN()) 0f else hsv[0].coerceIn(0f, 359f)
+                                        currentSaturation = hsv[1].coerceIn(0f, 1f)
+                                        currentBrightness = hsv[2].coerceIn(0f, 1f)
+                                    } catch (e: Exception) {
+                                        // Fallback to default values
+                                        currentHue = 0f
+                                        currentSaturation = 1f
+                                        currentBrightness = 1f
+                                    }
                                 }
                         )
                         Text(
@@ -1677,54 +1560,6 @@ private fun ConnectedButtonGroup(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ColorSlider(
-    label: String,
-    value: Int,
-    valueRange: ClosedFloatingPointRange<Float>,
-    onValueChange: (Float) -> Unit,
-    gradientColors: List<Color>
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium)
-            Text(text = value.toString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-        }
-        
-        Box(modifier = Modifier.fillMaxWidth()) {
-            // Gradient background
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(32.dp)
-                    .clip(RoundedCornerShape(16.dp))
-            ) {
-                val gradient = Brush.horizontalGradient(colors = gradientColors)
-                drawRect(gradient, size = size)
-            }
-            
-            // Slider
-            Slider(
-                value = when (label) {
-                    "Hue" -> value.toFloat()
-                    else -> value.toFloat() 
-                },
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = Color.Transparent,
-                    inactiveTrackColor = Color.Transparent
-                )
-            )
         }
     }
 }
@@ -2096,16 +1931,20 @@ private fun LivePreviewClock(
     val defaultSecondaryColor = MaterialTheme.colorScheme.secondary
     val defaultSurfaceColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)
     
-    val secondaryAccentColor = remember(userPreferences.floatingClockStyle.secondaryAccentColor) {
-        userPreferences.floatingClockStyle.secondaryAccentColor?.let { 
-            androidx.compose.ui.graphics.Color(it) 
-        } ?: defaultSecondaryColor
+    val secondaryAccentColor = remember(userPreferences.floatingClockStyle.secondaryAccentColor, userPreferences.floatingClockStyle.useDynamicColor) {
+        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.secondaryAccentColor == null) {
+            defaultSecondaryColor // Use default Material 3 secondary color
+        } else {
+            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.secondaryAccentColor!!)
+        }
     }
     
-    val backgroundColor = remember(userPreferences.floatingClockStyle.backgroundColor) {
-        userPreferences.floatingClockStyle.backgroundColor?.let { 
-            androidx.compose.ui.graphics.Color(it) 
-        } ?: defaultSurfaceColor
+    val backgroundColor = remember(userPreferences.floatingClockStyle.backgroundColor, userPreferences.floatingClockStyle.useDynamicColor) {
+        if (userPreferences.floatingClockStyle.useDynamicColor || userPreferences.floatingClockStyle.backgroundColor == null) {
+            defaultSurfaceColor // Use default Material 3 surface color
+        } else {
+            androidx.compose.ui.graphics.Color(userPreferences.floatingClockStyle.backgroundColor!!)
+        }
     }
     
     val surfaceColor = backgroundColor.copy(alpha = 0.95f)
@@ -2128,7 +1967,7 @@ private fun LivePreviewClock(
             Text(
                 text = currentTime,
                 style = MaterialTheme.typography.headlineLarge.copy(
-                    fontSize = 24.sp,
+                    fontSize = (24.sp * userPreferences.floatingClockStyle.fontScale),
                     fontWeight = FontWeight.Bold
                 ),
                 color = primaryColor,
@@ -2141,10 +1980,10 @@ private fun LivePreviewClock(
                     Text(
                         text = currentDate,
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 14.sp,
+                            fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                             fontWeight = FontWeight.Medium
                         ),
-                        color = passiveColor,
+                        color = secondaryAccentColor,
                         textAlign = TextAlign.Start
                     )
                 }
@@ -2153,10 +1992,10 @@ private fun LivePreviewClock(
                         Text(
                             text = target,
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 14.sp,
+                                fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                                 fontWeight = FontWeight.Medium
                             ),
-                            color = if (progressInfo.isActive) secondaryAccentColor else passiveColor,
+                            color = secondaryAccentColor,
                             textAlign = TextAlign.Start
                         )
                     }
@@ -2166,20 +2005,20 @@ private fun LivePreviewClock(
                         Text(
                             text = currentDate,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 12.sp,
+                                fontSize = (12.sp * userPreferences.floatingClockStyle.fontScale),
                                 fontWeight = FontWeight.Medium
                             ),
-                            color = passiveColor,
+                            color = secondaryAccentColor,
                             textAlign = TextAlign.Start
                         )
                         targetTime?.let { target ->
                             Text(
                                 text = target,
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = 12.sp,
+                                    fontSize = (12.sp * userPreferences.floatingClockStyle.fontScale),
                                     fontWeight = FontWeight.Medium
                                 ),
-                                color = if (progressInfo.isActive) secondaryAccentColor else passiveColor,
+                                color = secondaryAccentColor,
                                 textAlign = TextAlign.Start
                             )
                         }
@@ -2193,10 +2032,10 @@ private fun LivePreviewClock(
                     Text(
                         text = currentDate,
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 14.sp,
+                            fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                             fontWeight = FontWeight.Medium
                         ),
-                        color = passiveColor,
+                        color = secondaryAccentColor,
                         textAlign = TextAlign.Start
                     )
                 }
@@ -2211,7 +2050,7 @@ private fun LivePreviewClock(
                         .fillMaxWidth()
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp)),
-                    color = if (progressInfo.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    color = if (progressInfo.isActive) secondaryAccentColor else MaterialTheme.colorScheme.surfaceVariant,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )

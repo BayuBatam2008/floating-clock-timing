@@ -56,7 +56,8 @@ fun FloatingOverlaySurface(
     val style = state.style
     val colorScheme = MaterialTheme.colorScheme
     val accentColor = style.accentColor() ?: colorScheme.primary
-    val pulseColor = colorScheme.tertiaryContainer
+    val secondaryAccentColor = style.secondaryAccentColor() ?: colorScheme.secondary
+    val pulseColor = secondaryAccentColor // Use secondary color for pulsing
     val surfaceColor = style.backgroundColor() ?: colorScheme.surfaceColorAtElevation(6.dp)
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -160,7 +161,7 @@ fun FloatingOverlaySurface(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
                             ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -182,7 +183,7 @@ fun FloatingOverlaySurface(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
                             ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = style.secondaryAccentColor() ?: MaterialTheme.colorScheme.secondary,
                             textAlign = TextAlign.Center
                         )
                         eventInfo?.let { info ->
@@ -213,8 +214,8 @@ fun FloatingOverlaySurface(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(16.dp)),
-                    color = accentColor,
-                    trackColor = accentColor.copy(alpha = 0.2f)
+                    color = secondaryAccentColor,
+                    trackColor = secondaryAccentColor.copy(alpha = 0.2f)
                 )
             }
         }
