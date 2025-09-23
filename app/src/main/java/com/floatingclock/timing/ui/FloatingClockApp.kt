@@ -86,6 +86,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -123,6 +124,7 @@ import com.floatingclock.timing.MainViewModel
 import com.floatingclock.timing.R
 import com.floatingclock.timing.ui.events.EventsScreen
 import com.floatingclock.timing.ui.events.EventViewModel
+import com.floatingclock.timing.ui.events.EventEditModal
 import com.floatingclock.timing.data.TimeSyncState
 import com.floatingclock.timing.data.model.FloatingClockStyle
 import com.floatingclock.timing.data.model.UserPreferences
@@ -268,7 +270,8 @@ fun FloatingClockApp(
                     hasOverlayPermission = hasOverlayPermission,
                     onRequestOverlayPermission = onRequestOverlayPermission,
                     onScheduleEvent = viewModel::scheduleEvent,
-                    onClearEvent = viewModel::clearEvent
+                    onClearEvent = viewModel::clearEvent,
+                    eventViewModel = eventViewModel
                 )
                 MainTab.Events -> EventsScreen(
                     modifier = Modifier.fillMaxSize(),
@@ -298,6 +301,15 @@ fun FloatingClockApp(
                 )
             }
         }
+    }
+    
+    // EventEditModal for quick add functionality
+    val showEventDialog by eventViewModel.showEventDialog.collectAsState()
+    if (showEventDialog) {
+        EventEditModal(
+            eventViewModel = eventViewModel,
+            onDismiss = { eventViewModel.hideEventDialog() }
+        )
     }
 }
 
@@ -435,7 +447,8 @@ private fun ClockTab(
     hasOverlayPermission: Boolean,
     onRequestOverlayPermission: () -> Unit,
     onScheduleEvent: (Instant) -> Unit,
-    onClearEvent: () -> Unit
+    onClearEvent: () -> Unit,
+    eventViewModel: EventViewModel
 ) {
     var currentMillis by remember(timeState.baseNetworkTimeMillis, timeState.baseElapsedRealtimeMillis) {
         mutableLongStateOf(timeState.baseNetworkTimeMillis)
@@ -458,11 +471,8 @@ private fun ClockTab(
             PermissionCard(onRequest = onRequestOverlayPermission)
         }
 
-        EventSchedulerCard(
-            currentInstant = currentInstant,
-            scheduledEvent = overlayState.eventTimeMillis?.let(Instant::ofEpochMilli),
-            onSchedule = onScheduleEvent,
-            onClear = onClearEvent
+        QuickAddEventCard(
+            onAddEvent = { eventViewModel.showCreateEventDialog() }
         )
     }
 }
@@ -1734,3 +1744,54 @@ private fun durationToDigits(durationMillis: Long): String {
 }
 
 private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+@Composable
+private fun QuickAddEventCard(
+    onAddEvent: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Event,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Quick Add Event",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            
+            Text(
+                text = "Create events with automatic scheduling and lifecycle management",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Button(
+                onClick = onAddEvent,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add New Event")
+            }
+        }
+    }
+}
