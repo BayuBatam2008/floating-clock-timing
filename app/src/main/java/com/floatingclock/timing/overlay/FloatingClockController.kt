@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.Intent
 import com.floatingclock.timing.data.PreferencesRepository
 import com.floatingclock.timing.data.TimeSyncManager
+import com.floatingclock.timing.data.EventRepository
 import com.floatingclock.timing.data.model.FloatingClockStyle
+import com.floatingclock.timing.data.model.Event
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +22,7 @@ import kotlinx.coroutines.isActive
 class FloatingClockController(
     private val appContext: Context,
     private val timeSyncManager: TimeSyncManager,
+    private val eventRepository: EventRepository,
     preferencesRepository: PreferencesRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -29,6 +32,7 @@ class FloatingClockController(
     val overlayState: StateFlow<FloatingOverlayUiState> = _overlayState.asStateFlow()
 
     private val eventState = MutableStateFlow<EventState?>(null)
+    private var currentActiveEventId: String? = null
 
     init {
         scope.launch {
@@ -41,6 +45,10 @@ class FloatingClockController(
         scope.launch {
             while (isActive) {
                 val now = timeSyncManager.currentTimeMillis()
+                
+                // Check for events within next hour and schedule the closest one
+                checkAndScheduleNextEvent(now)
+                
                 var showProgress = false
                 var progress = 0f
                 var pulsingStartedAt: Long? = null
@@ -49,26 +57,33 @@ class FloatingClockController(
                 val event = eventState.value
                 if (event != null) {
                     eventTime = event.eventTimeMillis
-                    val triggeredAt = event.triggeredAtMillis
-                    if (triggeredAt != null) {
-                        pulsingStartedAt = triggeredAt
-                        if (now - triggeredAt >= PULSE_DURATION_MILLIS) {
-                            eventState.value = null
-                            pulsingStartedAt = null
-                            eventTime = null
-                        }
-                    } else {
-                        val millisUntil = event.eventTimeMillis - now
-                        if (millisUntil <= PROGRESS_WINDOW_MILLIS) {
-                            showProgress = millisUntil > 0
-                            progress = (1f - millisUntil / PROGRESS_WINDOW_MILLIS.toFloat()).coerceIn(0f, 1f)
-                            if (millisUntil <= 0L) {
-                                val triggerMoment = event.eventTimeMillis
-                                eventState.value = event.copy(triggeredAtMillis = triggerMoment)
-                                pulsingStartedAt = triggerMoment
+                        val triggeredAt = event.triggeredAtMillis
+                        if (triggeredAt != null) {
+                            pulsingStartedAt = triggeredAt
+                            if (now - triggeredAt >= PULSE_DURATION_MILLIS) {
+                                // Event finished, delete it and clear state
+                                scope.launch {
+                                    currentActiveEventId?.let { eventId ->
+                                        eventRepository.deleteEvent(eventId)
+                                    }
+                                }
+                                eventState.value = null
+                                currentActiveEventId = null
+                                pulsingStartedAt = null
+                                eventTime = null
+                            }
+                        } else {
+                            val millisUntil = event.eventTimeMillis - now
+                            if (millisUntil <= PROGRESS_WINDOW_MILLIS) {
+                                showProgress = millisUntil > 0
+                                progress = (1f - millisUntil / PROGRESS_WINDOW_MILLIS.toFloat()).coerceIn(0f, 1f)
+                                if (millisUntil <= 0L) {
+                                    val triggerMoment = event.eventTimeMillis
+                                    eventState.value = event.copy(triggeredAtMillis = triggerMoment)
+                                    pulsingStartedAt = triggerMoment
+                                }
                             }
                         }
-                    }
                 }
 
                 val resolvedEvent = eventState.value
@@ -97,6 +112,29 @@ class FloatingClockController(
 
                 val delayMillis = if (overlayActive.get()) 16L else 200L
                 delay(delayMillis)
+            }
+        }
+    }
+
+    private fun checkAndScheduleNextEvent(now: Long) {
+        val eventsWithinHour = eventRepository.getEventsWithinNextHour()
+        val nextEvent = eventsWithinHour.firstOrNull()
+        
+        if (nextEvent != null) {
+            val eventDateTime = nextEvent.getEventDateTime()
+            if (eventDateTime != null) {
+                // Check if this is a different event than currently active
+                if (currentActiveEventId != nextEvent.id) {
+                    currentActiveEventId = nextEvent.id
+                    val triggered = if (eventDateTime <= now) eventDateTime else null
+                    eventState.value = EventState(eventTimeMillis = eventDateTime, triggeredAtMillis = triggered)
+                }
+            }
+        } else {
+            // No events within next hour, clear current state
+            if (currentActiveEventId != null) {
+                currentActiveEventId = null
+                eventState.value = null
             }
         }
     }

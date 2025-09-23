@@ -99,4 +99,44 @@ data class Event(
             ""
         }
     }
+    
+    // Get event datetime in milliseconds for comparison
+    fun getEventDateTime(): Long? {
+        return try {
+            val eventDate = LocalDate.parse(date)
+            val eventTime = LocalTime.parse(targetTime, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
+            val dateTime = eventDate.atTime(eventTime)
+            dateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    // Get remaining time in milliseconds until event
+    fun getTimeUntilEventMillis(): Long? {
+        val eventDateTime = getEventDateTime() ?: return null
+        val now = System.currentTimeMillis()
+        return if (eventDateTime > now) eventDateTime - now else null
+    }
+    
+    // Check if event is within next hour
+    fun isWithinNextHour(): Boolean {
+        val remainingTime = getTimeUntilEventMillis() ?: return false
+        val oneHour = 60 * 60 * 1000L // 1 hour in milliseconds
+        return remainingTime <= oneHour
+    }
+    
+    // Get progress percentage for countdown (0.0 to 1.0)
+    fun getCountdownProgress(startTimeMillis: Long = System.currentTimeMillis() - (60 * 60 * 1000L)): Float {
+        val eventDateTime = getEventDateTime() ?: return 0f
+        val now = System.currentTimeMillis()
+        
+        if (now >= eventDateTime) return 1f
+        if (now <= startTimeMillis) return 0f
+        
+        val totalDuration = eventDateTime - startTimeMillis
+        val elapsed = now - startTimeMillis
+        
+        return (elapsed.toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
+    }
 }

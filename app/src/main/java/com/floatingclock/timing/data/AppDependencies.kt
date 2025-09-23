@@ -12,6 +12,8 @@ object AppDependencies {
 
     lateinit var preferencesRepository: PreferencesRepository
         private set
+    lateinit var eventRepository: EventRepository
+        private set
     lateinit var timeSyncManager: TimeSyncManager
         private set
     lateinit var floatingClockController: FloatingClockController
@@ -24,8 +26,9 @@ object AppDependencies {
         appContext = application
         ntpClient = NtpClient()
         preferencesRepository = PreferencesRepository(appContext)
-        timeSyncManager = TimeSyncManager(preferencesRepository, ntpClient, ioDispatcher)
-        floatingClockController = FloatingClockController(appContext, timeSyncManager, preferencesRepository)
+        eventRepository = EventRepository(appContext)
+        timeSyncManager = TimeSyncManager(preferencesRepository, ntpClient, eventRepository, ioDispatcher)
+        floatingClockController = FloatingClockController(appContext, timeSyncManager, eventRepository, preferencesRepository)
         initialized = true
     }
 }

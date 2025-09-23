@@ -2,6 +2,7 @@ package com.floatingclock.timing.data
 
 import android.os.SystemClock
 import com.floatingclock.timing.data.model.UserPreferences
+import com.floatingclock.timing.data.model.Event
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineDispatcher
@@ -21,6 +22,7 @@ import kotlinx.coroutines.sync.withLock
 class TimeSyncManager(
     private val preferencesRepository: PreferencesRepository,
     private val ntpClient: NtpClient,
+    private val eventRepository: EventRepository? = null,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -28,14 +30,23 @@ class TimeSyncManager(
 
     private val _state = MutableStateFlow(TimeSyncState())
     val state: StateFlow<TimeSyncState> = _state.asStateFlow()
+    
+    private val _activeTargetEvent = MutableStateFlow<Event?>(null)
+    val activeTargetEvent: StateFlow<Event?> = _activeTargetEvent.asStateFlow()
 
     private var autoSyncJob: Job? = null
+    private var eventMonitoringJob: Job? = null
 
     init {
         scope.launch {
             preferencesRepository.preferencesFlow.collectLatest { preferences ->
                 applyPreferences(preferences)
             }
+        }
+        
+        // Start event monitoring if eventRepository is available
+        eventRepository?.let { repository ->
+            startEventMonitoring(repository)
         }
     }
 
@@ -142,6 +153,32 @@ class TimeSyncManager(
                 syncNow()
             }
         }
+    }
+    
+    private fun startEventMonitoring(repository: EventRepository) {
+        eventMonitoringJob = scope.launch {
+            while (true) {
+                try {
+                    // Check for completed events and delete them
+                    repository.deleteCompletedEvents()
+                    
+                    // Update active target event
+                    val activeEvent = repository.getActiveTargetEvent()
+                    _activeTargetEvent.value = activeEvent
+                    
+                    // Wait 1 second before next check
+                    delay(1000)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    delay(5000) // Wait longer on error
+                }
+            }
+        }
+    }
+    
+    fun stopEventMonitoring() {
+        eventMonitoringJob?.cancel()
+        _activeTargetEvent.value = null
     }
 }
 

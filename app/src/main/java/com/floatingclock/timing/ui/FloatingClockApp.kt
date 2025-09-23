@@ -268,7 +268,8 @@ fun FloatingClockApp(
                     hasOverlayPermission = hasOverlayPermission,
                     onRequestOverlayPermission = onRequestOverlayPermission,
                     onScheduleEvent = viewModel::scheduleEvent,
-                    onClearEvent = viewModel::clearEvent
+                    onClearEvent = viewModel::clearEvent,
+                    eventViewModel = eventViewModel
                 )
                 MainTab.Events -> EventsScreen(
                     modifier = Modifier.fillMaxSize(),
@@ -435,7 +436,8 @@ private fun ClockTab(
     hasOverlayPermission: Boolean,
     onRequestOverlayPermission: () -> Unit,
     onScheduleEvent: (Instant) -> Unit,
-    onClearEvent: () -> Unit
+    onClearEvent: () -> Unit,
+    eventViewModel: EventViewModel
 ) {
     var currentMillis by remember(timeState.baseNetworkTimeMillis, timeState.baseElapsedRealtimeMillis) {
         mutableLongStateOf(timeState.baseNetworkTimeMillis)
@@ -458,11 +460,9 @@ private fun ClockTab(
             PermissionCard(onRequest = onRequestOverlayPermission)
         }
 
-        EventSchedulerCard(
+        QuickAddEventCard(
             currentInstant = currentInstant,
-            scheduledEvent = overlayState.eventTimeMillis?.let(Instant::ofEpochMilli),
-            onSchedule = onScheduleEvent,
-            onClear = onClearEvent
+            eventViewModel = eventViewModel
         )
     }
 }
@@ -1660,7 +1660,7 @@ private fun LivePreviewClock(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = currentDate,
-                            style = MaterialTheme.typography.bodyMedium.copy(
+                            style = MaterialTheme.typography.bodyLarge.copy(
                                 fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                                 fontWeight = FontWeight.Medium
                             ),
@@ -1670,7 +1670,7 @@ private fun LivePreviewClock(
                         targetTime?.let { target ->
                             Text(
                                 text = "• $target",
-                                style = MaterialTheme.typography.bodyMedium.copy(
+                                style = MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                                     fontWeight = FontWeight.Medium
                                 ),
@@ -1731,6 +1731,55 @@ private fun durationToDigits(durationMillis: Long): String {
     remaining -= TimeUnit.SECONDS.toMillis(seconds.toLong())
     val millis = remaining.toInt().coerceAtMost(999)
     return String.format("%02d%02d%02d%03d", hours, minutes, seconds, millis)
+}
+
+@Composable
+private fun QuickAddEventCard(
+    currentInstant: Instant,
+    eventViewModel: EventViewModel
+) {
+    var showEventModal by remember { mutableStateOf(false) }
+    
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(
+                text = "Quick Add Event", 
+                style = MaterialTheme.typography.titleMedium
+            )
+            
+            Text(
+                text = "Quickly create a new event with smart defaults",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            // Quick add button
+            Button(
+                onClick = { showEventModal = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add New Event")
+            }
+        }
+    }
+    
+    // Show event creation modal
+    if (showEventModal) {
+        com.floatingclock.timing.ui.events.EventEditModal(
+            eventViewModel = eventViewModel,
+            onDismiss = { showEventModal = false }
+        )
+    }
 }
 
 private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

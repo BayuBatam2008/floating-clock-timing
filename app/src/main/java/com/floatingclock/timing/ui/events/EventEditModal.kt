@@ -32,7 +32,21 @@ fun EventEditModal(
     val eventName by eventViewModel.eventName.collectAsState()
     val selectedDate by eventViewModel.selectedDate.collectAsState()
     val timeInput by eventViewModel.currentTimeInput.collectAsState()
+    val editingEvent by eventViewModel.editingEvent.collectAsState()
+    val errorMessage by eventViewModel.errorMessage.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    
+    // Show error messages
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Long
+            )
+            eventViewModel.clearErrorMessage()
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -172,6 +186,9 @@ fun EventEditModal(
             DatePicker(state = datePickerState)
         }
     }
+    
+    // Display Snackbar for error messages
+    SnackbarHost(hostState = snackbarHostState)
 }
 
 @Composable

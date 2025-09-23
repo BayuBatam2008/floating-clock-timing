@@ -118,14 +118,17 @@ class FloatingClockService : Service() {
         // Initialize dependencies
         val preferencesRepository = PreferencesRepository(this)
         val ntpClient = com.floatingclock.timing.data.NtpClient()
+        val eventRepository = com.floatingclock.timing.data.EventRepository(applicationContext)
         val timeSyncManager = TimeSyncManager(
             preferencesRepository = preferencesRepository,
-            ntpClient = ntpClient
+            ntpClient = ntpClient,
+            eventRepository = eventRepository
         )
         
         controller = FloatingClockController(
             appContext = applicationContext,
             timeSyncManager = timeSyncManager,
+            eventRepository = eventRepository,
             preferencesRepository = preferencesRepository
         )
         createOverlay()

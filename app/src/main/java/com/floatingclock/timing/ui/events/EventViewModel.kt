@@ -27,8 +27,17 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
     val editingEvent: StateFlow<Event?> = _editingEvent.asStateFlow()
     
     // Current time input state for new/editing event
-    private val _currentTimeInput = MutableStateFlow("090000000") // Default 09:00:00.000
+    private val _currentTimeInput = MutableStateFlow(getDefaultTimeInput()) // Default to current time + 5 minutes
     val currentTimeInput: StateFlow<String> = _currentTimeInput.asStateFlow()
+    
+    private fun getDefaultTimeInput(): String {
+        val now = LocalTime.now()
+        // Round to next minute, then add 5 minutes
+        val roundedToNextMinute = now.withSecond(0).withNano(0).plusMinutes(1)
+        val defaultTime = roundedToNextMinute.plusMinutes(5)
+        return String.format("%02d%02d%02d%03d", 
+            defaultTime.hour, defaultTime.minute, defaultTime.second, defaultTime.nano / 1000000)
+    }
     
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
@@ -44,6 +53,9 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
     
     private val _vibrationEnabled = MutableStateFlow(true)
     val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
+    
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
     
     fun showCreateEventDialog() {
         resetEventForm()
@@ -66,7 +78,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                 time.hour, time.minute, time.second, time.nano / 1000000)
             _currentTimeInput.value = formattedTime
         } catch (e: Exception) {
-            _currentTimeInput.value = "090000000"
+            _currentTimeInput.value = "000000000"
         }
         
         _showEventDialog.value = true
@@ -83,7 +95,14 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         _soundEnabled.value = true
         _vibrationEnabled.value = true
         _selectedDate.value = LocalDate.now()
-        _currentTimeInput.value = "090000000"
+        
+        // Set default time to next rounded minute + 5 minutes
+        val now = LocalTime.now()
+        val roundedToNextMinute = now.withSecond(0).withNano(0).plusMinutes(1)
+        val defaultTime = roundedToNextMinute.plusMinutes(5)
+        val formattedTime = String.format("%02d%02d%02d%03d", 
+            defaultTime.hour, defaultTime.minute, defaultTime.second, defaultTime.nano / 1000000)
+        _currentTimeInput.value = formattedTime
     }
     
     fun updateEventName(name: String) {
@@ -137,17 +156,30 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         return "$hours:$minutes:$seconds.$millis"
     }
     
-    fun saveEvent() {
+    fun saveEvent(onResult: ((Boolean) -> Unit)? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val timeString = getFormattedTimeFromInput()
+                val date = _selectedDate.value.toString()
+                
+                // Check if event is scheduled for today but with past time
+                val today = LocalDate.now()
+                val currentTime = LocalTime.now()
+                if (_selectedDate.value.isEqual(today)) {
+                    val eventTime = LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
+                    if (eventTime.isBefore(currentTime)) {
+                        _errorMessage.value = "Tidak dapat membuat event dengan waktu yang sudah lewat untuk hari ini!"
+                        onResult?.invoke(false)
+                        return@launch
+                    }
+                }
                 
                 val event = if (_editingEvent.value != null) {
                     _editingEvent.value!!.copy(
                         name = _eventName.value,
                         targetTime = timeString,
-                        date = _selectedDate.value.toString(),
+                        date = date,
                         description = _eventDescription.value,
                         soundEnabled = _soundEnabled.value,
                         vibrationEnabled = _vibrationEnabled.value
@@ -156,7 +188,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                     Event(
                         name = _eventName.value,
                         targetTime = timeString,
-                        date = _selectedDate.value.toString(),
+                        date = date,
                         description = _eventDescription.value,
                         soundEnabled = _soundEnabled.value,
                         vibrationEnabled = _vibrationEnabled.value
@@ -164,14 +196,29 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                 }
                 
                 if (_editingEvent.value != null) {
+                    // Check for conflicts when updating
+                    if (eventRepository.hasConflictingEvent(event.targetTime, event.date, event.id)) {
+                        _errorMessage.value = "Event dengan waktu dan tanggal yang sama sudah ada!"
+                        onResult?.invoke(false)
+                        return@launch
+                    }
                     eventRepository.updateEvent(event)
                 } else {
-                    eventRepository.addEvent(event)
+                    val success = eventRepository.addEvent(event)
+                    if (!success) {
+                        // Handle duplicate case - show error message instead of closing
+                        _errorMessage.value = "Event dengan waktu dan tanggal yang sama sudah ada!"
+                        onResult?.invoke(false)
+                        return@launch
+                    }
                 }
                 
+                // Success case
                 hideEventDialog()
+                onResult?.invoke(true)
             } catch (e: Exception) {
                 e.printStackTrace()
+                onResult?.invoke(false)
             } finally {
                 _isLoading.value = false
             }
@@ -192,6 +239,10 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
     
     fun getUpcomingEvents(): List<Event> {
         return eventRepository.getUpcomingEvents()
+    }
+    
+    fun clearErrorMessage() {
+        _errorMessage.value = null
     }
     
     class Factory(private val eventRepository: EventRepository) : ViewModelProvider.Factory {

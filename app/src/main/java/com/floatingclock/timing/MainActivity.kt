@@ -333,14 +333,20 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                     ) {
                         Text(
                             text = currentDate,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
                             color = passiveColor,
                             textAlign = TextAlign.Start
                         )
                         targetTime?.let { target ->
                             Text(
                                 text = target,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
                                 color = if (progressInfo.isActive) primaryColor else passiveColor,
                                 textAlign = TextAlign.End
                             )

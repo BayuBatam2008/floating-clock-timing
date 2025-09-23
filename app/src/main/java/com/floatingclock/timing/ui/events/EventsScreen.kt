@@ -51,6 +51,23 @@ fun EventsScreen(
 ) {
     val events by eventViewModel.events.collectAsState(initial = emptyList())
     val showEventDialog by eventViewModel.showEventDialog.collectAsState()
+    val errorMessage by eventViewModel.errorMessage.collectAsState()
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Show snackbar when error message is available
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
+            try {
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    duration = SnackbarDuration.Long
+                )
+            } finally {
+                eventViewModel.clearErrorMessage()
+            }
+        }
+    }
     
     // Use external selection state
     var internalSelectionMode by remember { mutableStateOf(isSelectionMode) }
@@ -73,51 +90,67 @@ fun EventsScreen(
         }
     }
     
-    if (events.isEmpty()) {
-        EmptyEventsState(
-            onCreateEvent = { eventViewModel.showCreateEventDialog() },
-            modifier = Modifier.fillMaxSize()
-        )
-    } else {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(events) { event ->
-                EventCard(
-                    event = event,
-                    isSelectionMode = internalSelectionMode,
-                    isSelected = internalSelectedEvents.contains(event.id),
-                    onToggleEnabled = { eventViewModel.toggleEventEnabled(event.id) },
-                    onEdit = { eventViewModel.showEditEventDialog(event) },
-                    onDelete = { eventViewModel.deleteEvent(event.id) },
-                    onSelect = { 
-                        val newSelectedEvents = if (internalSelectedEvents.contains(event.id)) {
-                            internalSelectedEvents - event.id
-                        } else {
-                            internalSelectedEvents + event.id
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (events.isEmpty()) {
+            EmptyEventsState(
+                onCreateEvent = { eventViewModel.showCreateEventDialog() },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(events) { event ->
+                    EventCard(
+                        event = event,
+                        isSelectionMode = internalSelectionMode,
+                        isSelected = internalSelectedEvents.contains(event.id),
+                        onToggleEnabled = { eventViewModel.toggleEventEnabled(event.id) },
+                        onEdit = { eventViewModel.showEditEventDialog(event) },
+                        onDelete = { eventViewModel.deleteEvent(event.id) },
+                        onSelect = { 
+                            val newSelectedEvents = if (internalSelectedEvents.contains(event.id)) {
+                                internalSelectedEvents - event.id
+                            } else {
+                                internalSelectedEvents + event.id
+                            }
+                            internalSelectedEvents = newSelectedEvents
+                            onSelectedEventsChange(newSelectedEvents)
+                        },
+                        onLongPress = {
+                            internalSelectionMode = true
+                            val newSelectedEvents = setOf(event.id)
+                            internalSelectedEvents = newSelectedEvents
+                            onSelectionModeChange(true)
+                            onSelectedEventsChange(newSelectedEvents)
                         }
-                        internalSelectedEvents = newSelectedEvents
-                        onSelectedEventsChange(newSelectedEvents)
-                    },
-                    onLongPress = {
-                        internalSelectionMode = true
-                        val newSelectedEvents = setOf(event.id)
-                        internalSelectedEvents = newSelectedEvents
-                        onSelectionModeChange(true)
-                        onSelectedEventsChange(newSelectedEvents)
-                    }
-                )
-            }
-            
-            // Add some bottom padding for FAB
-            item {
-                Spacer(modifier = Modifier.height(80.dp))
+                    )
+                }
+                
+                // Add some bottom padding for FAB
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
             }
         }
+        
+        // Snackbar positioned at TOP of screen to avoid modal overlay
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 50.dp), // Safe area for status bar
+            snackbar = { snackbarData ->
+                Snackbar(
+                    snackbarData = snackbarData,
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    actionColor = MaterialTheme.colorScheme.inversePrimary
+                )
+            }
+        )
     }
     
     // Event creation/edit modal
