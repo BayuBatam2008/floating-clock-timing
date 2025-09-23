@@ -34,54 +34,78 @@ fun EventEditModal(
     val timeInput by eventViewModel.currentTimeInput.collectAsState()
     val editingEvent by eventViewModel.editingEvent.collectAsState()
     val errorMessage by eventViewModel.errorMessage.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     
-    // Show error messages
+    // Snackbar setup
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Show snackbar when error message is set
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
             snackbarHostState.showSnackbar(
                 message = message,
-                duration = SnackbarDuration.Long
+                duration = SnackbarDuration.Short
             )
             eventViewModel.clearErrorMessage()
         }
     }
-
-    ModalBottomSheet(
+    
+    // Use Material 3 ModalBottomSheet with built-in animations
+    val bottomSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false // Allow dragging
+    )
+    
+    Box {
+        ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = bottomSheetState,
         dragHandle = {
             Box(
                 modifier = Modifier
-                    .padding(top = 8.dp)
-                    .size(width = 32.dp, height = 4.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        RoundedCornerShape(2.dp)
-                    )
-            )
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 32.dp, height = 4.dp)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            RoundedCornerShape(2.dp)
+                        )
+                )
+            }
         }
     ) {
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-            // Header with close button
+            // Header with save button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "New Event",
+                    text = if (editingEvent != null) "Edit Event" else "New Event",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                IconButton(onClick = { 
-                    eventViewModel.saveEvent()
-                    onDismiss()
-                }) {
+                
+                FloatingActionButton(
+                    onClick = { 
+                        eventViewModel.saveEvent { success ->
+                            if (success) {
+                                onDismiss()
+                            }
+                            // If failed, do nothing - snackbar will show and modal stays open
+                        }
+                    },
+                    modifier = Modifier.size(48.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Save Event",
-                        tint = MaterialTheme.colorScheme.primary
+                        contentDescription = "Save Event"
                     )
                 }
             }
@@ -129,37 +153,28 @@ fun EventEditModal(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Save Button with proper spacing
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Text("Cancel")
-                }
-                Button(
-                    onClick = {
-                        eventViewModel.saveEvent()
-                        onDismiss()
-                    },
-                    modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Text("Save Event")
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+        
+        // SnackbarHost positioned at the bottom
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
     
     // Date Picker Dialog
     if (showDatePicker) {
+        val today = LocalDate.now()
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate.toEpochDay() * 24L * 60L * 60L * 1000L
+            initialSelectedDateMillis = selectedDate.toEpochDay() * 24L * 60L * 60L * 1000L,
+            yearRange = today.year..today.year + 1, // Limit to current year and next year
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val date = LocalDate.ofEpochDay(utcTimeMillis / (24L * 60L * 60L * 1000L))
+                    return !date.isBefore(today) // Only allow today and future dates
+                }
+            }
         )
         
         DatePickerDialog(
@@ -186,9 +201,6 @@ fun EventEditModal(
             DatePicker(state = datePickerState)
         }
     }
-    
-    // Display Snackbar for error messages
-    SnackbarHost(hostState = snackbarHostState)
 }
 
 @Composable
@@ -201,18 +213,12 @@ private fun TimeInputScheduleSection(
     // State for absolute time input (like alarm clock) - parse from currentTimeInput
     var selectedSegment by rememberSaveable { mutableStateOf(0) } // 0=hours, 1=minutes, 2=seconds, 3=millis
     
-    // Parse current time input
+    // Parse current time input - remove rememberSaveable to avoid conflicts
     val paddedInput = currentTimeInput.padStart(9, '0')
-    var hours by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(0, 2).toIntOrNull() ?: 0) }
-    var minutes by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(2, 4).toIntOrNull() ?: 0) }
-    var seconds by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(4, 6).toIntOrNull() ?: 0) }
-    var millis by rememberSaveable(paddedInput) { mutableStateOf(paddedInput.substring(6, 9).toIntOrNull() ?: 0) }
-    
-    // Update eventViewModel when values change
-    LaunchedEffect(hours, minutes, seconds, millis) {
-        val timeString = "%02d%02d%02d%03d".format(hours, minutes, seconds, millis)
-        eventViewModel.updateTimeInput(timeString)
-    }
+    val hours = paddedInput.substring(0, 2).toIntOrNull() ?: 0
+    val minutes = paddedInput.substring(2, 4).toIntOrNull() ?: 0
+    val seconds = paddedInput.substring(4, 6).toIntOrNull() ?: 0
+    val millis = paddedInput.substring(6, 9).toIntOrNull() ?: 0
 
     Card(
         shape = MaterialTheme.shapes.large,
@@ -228,43 +234,37 @@ private fun TimeInputScheduleSection(
                 seconds = seconds,
                 millis = millis,
                 selectedSegment = selectedSegment,
-                onSegmentClick = { segment -> selectedSegment = segment }
+                onSegmentClick = { segment -> 
+                    selectedSegment = segment 
+                }
             )
 
-            // Quick time buttons (set to common times)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val quickTimes = remember { 
-                    listOf(
-                        Triple(6, 0, "6:00"),
-                        Triple(7, 30, "7:30"),
-                        Triple(12, 0, "12:00"),
-                        Triple(18, 0, "18:00")
-                    )
-                }
-                quickTimes.forEach { (h, m, label) ->
-                    AssistChip(
-                        onClick = {
-                            hours = h
-                            minutes = m
-                            seconds = 0
-                            millis = 0
-                        },
-                        label = { Text(text = label) }
-                    )
-                }
-            }
-
-            // Interactive Keypad for editing selected segment - EXACT COPY
+            // Interactive Keypad for editing selected segment - Updated to use ViewModel directly
             EventInteractiveKeypad(
                 selectedSegment = selectedSegment,
                 hours = hours,
                 minutes = minutes,
                 seconds = seconds,
                 millis = millis,
-                onHoursChange = { hours = it.coerceIn(0, 23) },
-                onMinutesChange = { minutes = it.coerceIn(0, 59) },
-                onSecondsChange = { seconds = it.coerceIn(0, 59) },
-                onMillisChange = { millis = it.coerceIn(0, 999) }
+                onHoursChange = { newHours -> 
+                    val timeString = "%02d%02d%02d%03d".format(newHours.coerceIn(0, 23), minutes, seconds, millis)
+                    eventViewModel.updateTimeInput(timeString)
+                },
+                onMinutesChange = { newMinutes -> 
+                    val timeString = "%02d%02d%02d%03d".format(hours, newMinutes.coerceIn(0, 59), seconds, millis)
+                    eventViewModel.updateTimeInput(timeString)
+                },
+                onSecondsChange = { newSeconds -> 
+                    val timeString = "%02d%02d%02d%03d".format(hours, minutes, newSeconds.coerceIn(0, 59), millis)
+                    eventViewModel.updateTimeInput(timeString)
+                },
+                onMillisChange = { newMillis -> 
+                    val timeString = "%02d%02d%02d%03d".format(hours, minutes, seconds, newMillis.coerceIn(0, 999))
+                    eventViewModel.updateTimeInput(timeString)
+                },
+                onResetAll = {
+                    eventViewModel.updateTimeInput("000000000")
+                }
             )
         }
     }
@@ -323,7 +323,7 @@ private fun EventInteractiveTimeDisplay(
 }
 
 // EXACT COPY of InteractiveTimeSegment from FloatingClockApp
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EventInteractiveTimeSegment(
     value: String,
@@ -402,42 +402,80 @@ private fun EventInteractiveKeypad(
     onHoursChange: (Int) -> Unit,
     onMinutesChange: (Int) -> Unit,
     onSecondsChange: (Int) -> Unit,
-    onMillisChange: (Int) -> Unit
+    onMillisChange: (Int) -> Unit,
+    onResetAll: () -> Unit = {}
 ) {
-    // State for editing the current segment as string for easier input handling
-    var editingValue by rememberSaveable(selectedSegment) { 
-        mutableStateOf(
-            when (selectedSegment) {
-                0 -> hours.toString()
-                1 -> minutes.toString()
-                2 -> seconds.toString()
-                3 -> millis.toString()
-                else -> "0"
+    // Function to handle digit input for the selected segment
+    fun handleDigitInput(digit: String) {
+        val currentValue = when (selectedSegment) {
+            0 -> hours
+            1 -> minutes
+            2 -> seconds
+            3 -> millis
+            else -> 0
+        }
+        
+        val maxLength = when (selectedSegment) {
+            0, 1, 2 -> 2  // Hours, minutes, seconds: max 2 digits
+            3 -> 3        // Milliseconds: max 3 digits
+            else -> 2
+        }
+        
+        val maxValue = when (selectedSegment) {
+            0 -> 23  // Hours: 0-23
+            1, 2 -> 59  // Minutes, seconds: 0-59
+            3 -> 999  // Milliseconds: 0-999
+            else -> 23
+        }
+        
+        // Calculate new value
+        val currentStr = currentValue.toString()
+        val newValueStr = if (currentValue == 0) {
+            digit
+        } else {
+            val candidate = (currentStr + digit).take(maxLength)
+            val candidateInt = candidate.toIntOrNull() ?: 0
+            if (candidateInt <= maxValue) {
+                candidate
+            } else {
+                currentStr // Keep old value if exceeds max
             }
-        )
-    }
-
-    // Update editing value when selected segment changes
-    LaunchedEffect(selectedSegment, hours, minutes, seconds, millis) {
-        editingValue = when (selectedSegment) {
-            0 -> hours.toString()
-            1 -> minutes.toString()
-            2 -> seconds.toString()
-            3 -> millis.toString()
-            else -> "0"
+        }
+        
+        val newValue = newValueStr.toIntOrNull() ?: 0
+        
+        // Call appropriate callback
+        when (selectedSegment) {
+            0 -> onHoursChange(newValue.coerceIn(0, 23))
+            1 -> onMinutesChange(newValue.coerceIn(0, 59))
+            2 -> onSecondsChange(newValue.coerceIn(0, 59))
+            3 -> onMillisChange(newValue.coerceIn(0, 999))
         }
     }
-
-    // Function to handle value input for the selected segment
-    fun updateSelectedSegment(newValue: String) {
-        editingValue = newValue
-        val intValue = newValue.toIntOrNull() ?: 0
+    
+    fun handleBackspace() {
+        val currentValue = when (selectedSegment) {
+            0 -> hours
+            1 -> minutes
+            2 -> seconds
+            3 -> millis
+            else -> 0
+        }
+        
+        val currentStr = currentValue.toString()
+        val newValueStr = if (currentStr.length > 1) {
+            currentStr.dropLast(1)
+        } else {
+            "0"
+        }
+        
+        val newValue = newValueStr.toIntOrNull() ?: 0
         
         when (selectedSegment) {
-            0 -> onHoursChange(intValue.coerceIn(0, 23))
-            1 -> onMinutesChange(intValue.coerceIn(0, 59))
-            2 -> onSecondsChange(intValue.coerceIn(0, 59))
-            3 -> onMillisChange(intValue.coerceIn(0, 999))
+            0 -> onHoursChange(newValue.coerceIn(0, 23))
+            1 -> onMinutesChange(newValue.coerceIn(0, 59))
+            2 -> onSecondsChange(newValue.coerceIn(0, 59))
+            3 -> onMillisChange(newValue.coerceIn(0, 999))
         }
     }
 
@@ -452,21 +490,6 @@ private fun EventInteractiveKeypad(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Display current editing segment info
-        Text(
-            text = when (selectedSegment) {
-                0 -> "Editing Hours (0-23)"
-                1 -> "Editing Minutes (0-59)"
-                2 -> "Editing Seconds (0-59)"
-                3 -> "Editing Milliseconds (0-999)"
-                else -> "Select a time segment"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
-
         keypadRows.forEachIndexed { rowIndex, row ->
             key(rowIndex) {
                 Row(
@@ -480,49 +503,9 @@ private fun EventInteractiveKeypad(
                                 label = key,
                                 onClick = {
                                     when (key) {
-                                        "⌫" -> {
-                                            if (editingValue.isNotEmpty()) {
-                                                val newValue = editingValue.dropLast(1)
-                                                updateSelectedSegment(if (newValue.isEmpty()) "0" else newValue)
-                                            }
-                                        }
-                                        "Reset" -> {
-                                            // Clear all time input values
-                                            onHoursChange(0)
-                                            onMinutesChange(0)
-                                            onSecondsChange(0)
-                                            onMillisChange(0)
-                                            editingValue = "0"
-                                        }
-                                        else -> {
-                                            val maxLength = when (selectedSegment) {
-                                                0, 1, 2 -> 2  // Hours, minutes, seconds: max 2 digits
-                                                3 -> 3        // Milliseconds: max 3 digits
-                                                else -> 2
-                                            }
-                                            
-                                            val maxValue = when (selectedSegment) {
-                                                0 -> 23  // Hours: 0-23
-                                                1, 2 -> 59  // Minutes, seconds: 0-59
-                                                3 -> 999  // Milliseconds: 0-999
-                                                else -> 23
-                                            }
-                                            
-                                            // Build new value
-                                            val newValue = if (editingValue == "0") {
-                                                key
-                                            } else {
-                                                val candidate = (editingValue + key).take(maxLength)
-                                                val candidateInt = candidate.toIntOrNull() ?: 0
-                                                if (candidateInt <= maxValue) {
-                                                    candidate
-                                                } else {
-                                                    editingValue // Keep old value if exceeds max
-                                                }
-                                            }
-                                            
-                                            updateSelectedSegment(newValue)
-                                        }
+                                        "Reset" -> onResetAll()
+                                        "⌫" -> handleBackspace()
+                                        else -> handleDigitInput(key)
                                     }
                                 }
                             )

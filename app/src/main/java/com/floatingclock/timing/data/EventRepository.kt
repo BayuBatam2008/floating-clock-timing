@@ -97,10 +97,6 @@ class EventRepository(context: Context) {
             currentEvents.add(event)
             _events.value = currentEvents.sortedWith(compareBy({ it.date }, { it.targetTime }))
             saveEvents()
-            
-            // Auto-activate the new event (makes it the active target)
-            setActiveEvent(event.id)
-            
             true
         } else {
             false
@@ -173,35 +169,15 @@ class EventRepository(context: Context) {
         return eventsWithinHour.firstOrNull() // Get the closest event within next hour
     }
     
-    // Store the active event ID in SharedPreferences
-    private fun setActiveEvent(eventId: String) {
-        sharedPreferences.edit()
-            .putString("active_event_id", eventId)
-            .apply()
-    }
-    
-    // Get the stored active event ID
-    fun getActiveEventId(): String? {
-        return sharedPreferences.getString("active_event_id", null)
-    }
-    
-    // Clear the active event
-    fun clearActiveEvent() {
-        sharedPreferences.edit()
-            .remove("active_event_id")
-            .apply()
-    }
-    
     suspend fun deleteCompletedEvents() = withContext(Dispatchers.IO) {
         val currentEvents = _events.value.toMutableList()
         val now = System.currentTimeMillis()
         
-        // Remove events that are past their target time by more than 5 minutes
-        val fiveMinutesAgo = now - (5 * 60 * 1000)
+        // Remove events that are past their target time
         val completedEventIds = currentEvents
             .filter { event ->
                 val eventDateTime = event.getEventDateTime()
-                eventDateTime != null && eventDateTime < fiveMinutesAgo
+                eventDateTime != null && eventDateTime < now
             }
             .map { it.id }
         
@@ -209,19 +185,6 @@ class EventRepository(context: Context) {
             currentEvents.removeAll { it.id in completedEventIds }
             _events.value = currentEvents
             saveEvents()
-            
-            // If the active event was removed, auto-select the next closest event
-            val currentActiveId = getActiveEventId()
-            if (currentActiveId in completedEventIds) {
-                clearActiveEvent()
-                
-                // Auto-select next closest event after 10 seconds delay
-                val nextEvent = getActiveTargetEvent()
-                nextEvent?.let { event ->
-                    kotlinx.coroutines.delay(10000) // 10 second delay
-                    setActiveEvent(event.id)
-                }
-            }
         }
     }
     

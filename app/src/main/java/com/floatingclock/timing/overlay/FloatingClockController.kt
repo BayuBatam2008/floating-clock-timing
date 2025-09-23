@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +34,7 @@ class FloatingClockController(
 
     private val eventState = MutableStateFlow<EventState?>(null)
     private var currentActiveEventId: String? = null
+    private var eventEndTimer: kotlinx.coroutines.Job? = null
 
     init {
         scope.launch {
@@ -125,17 +127,65 @@ class FloatingClockController(
             if (eventDateTime != null) {
                 // Check if this is a different event than currently active
                 if (currentActiveEventId != nextEvent.id) {
+                    // Cancel previous event timer if exists
+                    eventEndTimer?.cancel()
+                    
                     currentActiveEventId = nextEvent.id
                     val triggered = if (eventDateTime <= now) eventDateTime else null
                     eventState.value = EventState(eventTimeMillis = eventDateTime, triggeredAtMillis = triggered)
+                    
+                    // Schedule automatic event switch after 10 seconds if event is triggered
+                    if (triggered != null) {
+                        eventEndTimer = scope.launch {
+                            delay(10_000) // 10 seconds
+                            // Switch to next available event or clear if none
+                            scheduleNextEventAfterCurrent()
+                        }
+                    }
+                }
+                
+                // Auto-delete event if it's 5 minutes past its time
+                if (eventDateTime + (5 * 60 * 1000) <= now) {
+                    scope.launch {
+                        eventRepository.deleteEvent(nextEvent.id)
+                    }
                 }
             }
         } else {
             // No events within next hour, clear current state
             if (currentActiveEventId != null) {
+                eventEndTimer?.cancel()
                 currentActiveEventId = null
                 eventState.value = null
             }
+        }
+    }
+    
+    private fun scheduleNextEventAfterCurrent() {
+        val eventsWithinHour = eventRepository.getEventsWithinNextHour()
+        // Find next event that's not the current one
+        val nextEvent = eventsWithinHour.find { it.id != currentActiveEventId }
+        
+        if (nextEvent != null) {
+            val eventDateTime = nextEvent.getEventDateTime()
+            if (eventDateTime != null) {
+                currentActiveEventId = nextEvent.id
+                val now = timeSyncManager.currentTimeMillis()
+                val triggered = if (eventDateTime <= now) eventDateTime else null
+                eventState.value = EventState(eventTimeMillis = eventDateTime, triggeredAtMillis = triggered)
+                
+                // Schedule timer for this event too
+                if (triggered != null) {
+                    eventEndTimer = scope.launch {
+                        delay(10_000) // 10 seconds
+                        scheduleNextEventAfterCurrent()
+                    }
+                }
+            }
+        } else {
+            // No more events, clear state
+            currentActiveEventId = null
+            eventState.value = null
         }
     }
 

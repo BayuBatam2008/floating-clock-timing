@@ -36,7 +36,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         val roundedToNextMinute = now.withSecond(0).withNano(0).plusMinutes(1)
         val defaultTime = roundedToNextMinute.plusMinutes(5)
         return String.format("%02d%02d%02d%03d", 
-            defaultTime.hour, defaultTime.minute, defaultTime.second, defaultTime.nano / 1000000)
+            defaultTime.hour, defaultTime.minute, 0, 0) // Always use 00.000 for seconds and millis
     }
     
     private val _selectedDate = MutableStateFlow(LocalDate.now())
@@ -101,7 +101,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         val roundedToNextMinute = now.withSecond(0).withNano(0).plusMinutes(1)
         val defaultTime = roundedToNextMinute.plusMinutes(5)
         val formattedTime = String.format("%02d%02d%02d%03d", 
-            defaultTime.hour, defaultTime.minute, defaultTime.second, defaultTime.nano / 1000000)
+            defaultTime.hour, defaultTime.minute, 0, 0)
         _currentTimeInput.value = formattedTime
     }
     
@@ -125,35 +125,35 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         _selectedDate.value = date
     }
     
-    fun updateTimeInput(timeInput: String) {
-        _currentTimeInput.value = timeInput
+    fun updateTimeInput(hour: Int? = null, minute: Int? = null, second: Int? = null, millisecond: Int? = null) {
+        val currentValue = _currentTimeInput.value
+        
+        val currentHour = currentValue.substring(0, 2).toIntOrNull() ?: 0
+        val currentMinute = currentValue.substring(2, 4).toIntOrNull() ?: 0
+        val currentSecond = currentValue.substring(4, 6).toIntOrNull() ?: 0
+        val currentMillisecond = currentValue.substring(6, 9).toIntOrNull() ?: 0
+        
+        val newHour = hour ?: currentHour
+        val newMinute = minute ?: currentMinute
+        val newSecond = second ?: currentSecond
+        val newMillisecond = millisecond ?: currentMillisecond
+        
+        val newValue = String.format("%02d%02d%02d%03d", newHour, newMinute, newSecond, newMillisecond)
+        _currentTimeInput.value = newValue
     }
     
-    fun appendTimeDigit(digit: String) {
-        val current = _currentTimeInput.value
-        if (current.length < 9) {
-            _currentTimeInput.value = current + digit
-        }
+    fun updateTimeInput(newTimeString: String) {
+        _currentTimeInput.value = newTimeString
     }
     
-    fun removeLastTimeDigit() {
-        val current = _currentTimeInput.value
-        if (current.isNotEmpty()) {
-            _currentTimeInput.value = current.dropLast(1)
-        }
-    }
-    
-    fun clearTimeInput() {
-        _currentTimeInput.value = ""
-    }
-    
-    fun getFormattedTimeFromInput(): String {
-        val input = _currentTimeInput.value.padStart(9, '0')
-        val hours = input.substring(0, 2)
-        val minutes = input.substring(2, 4)
-        val seconds = input.substring(4, 6)
-        val millis = input.substring(6, 9)
-        return "$hours:$minutes:$seconds.$millis"
+    private fun getFormattedTimeFromInput(): String {
+        val input = _currentTimeInput.value
+        val hour = input.substring(0, 2).toIntOrNull() ?: 0
+        val minute = input.substring(2, 4).toIntOrNull() ?: 0
+        val second = input.substring(4, 6).toIntOrNull() ?: 0
+        val millisecond = input.substring(6, 9).toIntOrNull() ?: 0
+        
+        return String.format("%02d:%02d:%02d.%03d", hour, minute, second, millisecond)
     }
     
     fun saveEvent(onResult: ((Boolean) -> Unit)? = null) {
@@ -163,13 +163,13 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                 val timeString = getFormattedTimeFromInput()
                 val date = _selectedDate.value.toString()
                 
-                // Check if event is scheduled for today but with past time
+                // Validate if event time is in the past
                 val today = LocalDate.now()
-                val currentTime = LocalTime.now()
-                if (_selectedDate.value.isEqual(today)) {
+                if (_selectedDate.value == today) {
                     val eventTime = LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
+                    val currentTime = LocalTime.now()
                     if (eventTime.isBefore(currentTime)) {
-                        _errorMessage.value = "Tidak dapat membuat event dengan waktu yang sudah lewat untuk hari ini!"
+                        _errorMessage.value = "Waktu event tidak boleh lebih awal dari waktu sekarang untuk hari ini!"
                         onResult?.invoke(false)
                         return@launch
                     }
@@ -218,6 +218,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                 onResult?.invoke(true)
             } catch (e: Exception) {
                 e.printStackTrace()
+                _errorMessage.value = "Gagal menyimpan event: ${e.message}"
                 onResult?.invoke(false)
             } finally {
                 _isLoading.value = false
