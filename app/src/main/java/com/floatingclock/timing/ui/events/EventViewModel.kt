@@ -169,7 +169,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                     val eventTime = LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
                     val currentTime = LocalTime.now()
                     if (eventTime.isBefore(currentTime)) {
-                        _errorMessage.value = "Waktu event tidak boleh lebih awal dari waktu sekarang untuk hari ini!"
+                        _errorMessage.value = "Event time cannot be earlier than current time for today!"
                         onResult?.invoke(false)
                         return@launch
                     }
@@ -198,7 +198,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                 if (_editingEvent.value != null) {
                     // Check for conflicts when updating
                     if (eventRepository.hasConflictingEvent(event.targetTime, event.date, event.id)) {
-                        _errorMessage.value = "Event dengan waktu dan tanggal yang sama sudah ada!"
+                        _errorMessage.value = "An event with the same time and date already exists!"
                         onResult?.invoke(false)
                         return@launch
                     }
@@ -207,7 +207,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                     val success = eventRepository.addEvent(event)
                     if (!success) {
                         // Handle duplicate case - show error message instead of closing
-                        _errorMessage.value = "Event dengan waktu dan tanggal yang sama sudah ada!"
+                        _errorMessage.value = "An event with the same time and date already exists!"
                         onResult?.invoke(false)
                         return@launch
                     }
@@ -218,7 +218,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
                 onResult?.invoke(true)
             } catch (e: Exception) {
                 e.printStackTrace()
-                _errorMessage.value = "Gagal menyimpan event: ${e.message}"
+                _errorMessage.value = "Failed to save event: ${e.message}"
                 onResult?.invoke(false)
             } finally {
                 _isLoading.value = false

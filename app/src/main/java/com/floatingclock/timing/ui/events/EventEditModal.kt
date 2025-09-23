@@ -1,5 +1,6 @@
 package com.floatingclock.timing.ui.events
 
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,6 +30,8 @@ fun EventEditModal(
     eventViewModel: EventViewModel,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    
     // Collect individual states instead of uiState
     val eventName by eventViewModel.eventName.collectAsState()
     val selectedDate by eventViewModel.selectedDate.collectAsState()
@@ -36,17 +40,13 @@ fun EventEditModal(
     val errorMessage by eventViewModel.errorMessage.collectAsState()
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     
-    // Snackbar setup
-    val snackbarHostState = remember { SnackbarHostState() }
-    
-    // Show snackbar when error message is set
+    // Show Toast when there's an error message
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short
-            )
-            eventViewModel.clearErrorMessage()
+            if (message.isNotEmpty()) {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                eventViewModel.clearErrorMessage()
+            }
         }
     }
     
@@ -54,8 +54,6 @@ fun EventEditModal(
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false // Allow dragging
     )
-    
-    Box {
         ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = bottomSheetState,
@@ -96,7 +94,7 @@ fun EventEditModal(
                             if (success) {
                                 onDismiss()
                             }
-                            // If failed, do nothing - snackbar will show and modal stays open
+                            // If failed, do nothing - Toast will show and modal stays open
                         }
                     },
                     modifier = Modifier.size(48.dp),
@@ -154,13 +152,6 @@ fun EventEditModal(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
-    }
-        
-        // SnackbarHost positioned at the bottom
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
     
     // Date Picker Dialog

@@ -77,6 +77,10 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -182,6 +186,21 @@ fun FloatingClockApp(
     
     // FAB visibility based on scroll
     val fabExpanded = currentScrollState.value <= 100
+    
+    // Global SnackbarHost state
+    val snackbarHostState = remember { SnackbarHostState() }
+    val errorMessage by eventViewModel.errorMessage.collectAsState()
+    
+    // Show snackbar when error message is available
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Long
+            )
+            eventViewModel.clearErrorMessage()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -252,7 +271,20 @@ fun FloatingClockApp(
                 }
             }
         },
-        floatingActionButtonPosition = FabPosition.End
+        floatingActionButtonPosition = FabPosition.End,
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                snackbar = { snackbarData ->
+                    Snackbar(
+                        snackbarData = snackbarData,
+                        containerColor = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        actionColor = MaterialTheme.colorScheme.inversePrimary
+                    )
+                }
+            )
+        }
     ) { innerPadding ->
         AnimatedContent(
             targetState = selectedTab,
@@ -301,10 +333,11 @@ fun FloatingClockApp(
                 )
             }
         }
+    }
     
-    // EventEditModal for quick add functionality
+    // EventEditModal for quick add functionality - only show when on Clock tab
     val showEventDialog by eventViewModel.showEventDialog.collectAsState()
-    if (showEventDialog) {
+    if (showEventDialog && selectedTab == MainTab.Clock) {
         EventEditModal(
             eventViewModel = eventViewModel,
             onDismiss = { eventViewModel.hideEventDialog() }
@@ -1028,7 +1061,7 @@ private fun SyncTab(
             }
         }
         
-        // Add bottom spacing to avoid FAB overlap
+        // Add space at bottom to prevent FAB from blocking interactive elements
         Spacer(modifier = Modifier.height(80.dp))
     }
 }
@@ -1067,7 +1100,7 @@ private fun CustomizationTab(
                     }
                 )
                 
-                // Divider between font scale and show millisecond
+                // Divider between Font Scale and Show Millisecond
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
                 SettingSwitchRow(

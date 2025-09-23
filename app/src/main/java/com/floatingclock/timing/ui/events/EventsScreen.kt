@@ -51,23 +51,7 @@ fun EventsScreen(
 ) {
     val events by eventViewModel.events.collectAsState(initial = emptyList())
     val showEventDialog by eventViewModel.showEventDialog.collectAsState()
-    val errorMessage by eventViewModel.errorMessage.collectAsState()
-    
-    val snackbarHostState = remember { SnackbarHostState() }
-    
-    // Show snackbar when error message is available
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message ->
-            try {
-                snackbarHostState.showSnackbar(
-                    message = message,
-                    duration = SnackbarDuration.Long
-                )
-            } finally {
-                eventViewModel.clearErrorMessage()
-            }
-        }
-    }
+    // Error handling is now managed globally in FloatingClockApp
     
     // Use external selection state
     var internalSelectionMode by remember { mutableStateOf(isSelectionMode) }
@@ -135,21 +119,13 @@ fun EventsScreen(
                 }
             }
         }
-        
-        // Snackbar positioned at TOP of screen to avoid modal overlay
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 50.dp), // Safe area for status bar
-            snackbar = { snackbarData ->
-                Snackbar(
-                    snackbarData = snackbarData,
-                    containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                    actionColor = MaterialTheme.colorScheme.inversePrimary
-                )
-            }
+    }
+    
+    // Event creation/edit modal
+    if (showEventDialog) {
+        EventEditModal(
+            eventViewModel = eventViewModel,
+            onDismiss = { eventViewModel.hideEventDialog() }
         )
     }
 }
