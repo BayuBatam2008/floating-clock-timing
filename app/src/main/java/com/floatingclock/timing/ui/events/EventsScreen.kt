@@ -152,14 +152,6 @@ fun EventsScreen(
             }
         )
     }
-    
-    // Event creation/edit modal
-    if (showEventDialog) {
-        EventEditModal(
-            eventViewModel = eventViewModel,
-            onDismiss = { eventViewModel.hideEventDialog() }
-        )
-    }
 }
 
 @Composable

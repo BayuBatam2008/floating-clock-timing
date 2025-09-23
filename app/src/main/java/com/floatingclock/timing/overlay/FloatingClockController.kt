@@ -62,18 +62,8 @@ class FloatingClockController(
                         val triggeredAt = event.triggeredAtMillis
                         if (triggeredAt != null) {
                             pulsingStartedAt = triggeredAt
-                            if (now - triggeredAt >= PULSE_DURATION_MILLIS) {
-                                // Event finished, delete it and clear state
-                                scope.launch {
-                                    currentActiveEventId?.let { eventId ->
-                                        eventRepository.deleteEvent(eventId)
-                                    }
-                                }
-                                eventState.value = null
-                                currentActiveEventId = null
-                                pulsingStartedAt = null
-                                eventTime = null
-                            }
+                            // Don't delete here - let checkAndScheduleNextEvent handle cleanup after 5 minutes
+                            // Just continue showing pulsing animation
                         } else {
                             val millisUntil = event.eventTimeMillis - now
                             if (millisUntil <= PROGRESS_WINDOW_MILLIS) {
@@ -142,12 +132,30 @@ class FloatingClockController(
                             scheduleNextEventAfterCurrent()
                         }
                     }
+                } else {
+                    // Check if current event needs to be auto-switched after 10 seconds of pulsing
+                    val currentEventState = eventState.value
+                    if (currentEventState?.triggeredAtMillis != null) {
+                        val timeSinceTrigger = now - currentEventState.triggeredAtMillis!!
+                        if (timeSinceTrigger >= 10_000L && eventEndTimer?.isActive != true) {
+                            // Time to switch to next event
+                            eventEndTimer = scope.launch {
+                                scheduleNextEventAfterCurrent()
+                            }
+                        }
+                    }
                 }
                 
                 // Auto-delete event if it's 5 minutes past its time
                 if (eventDateTime + (5 * 60 * 1000) <= now) {
                     scope.launch {
                         eventRepository.deleteEvent(nextEvent.id)
+                        // Clear current state if this was the active event
+                        if (currentActiveEventId == nextEvent.id) {
+                            currentActiveEventId = null
+                            eventState.value = null
+                            eventEndTimer?.cancel()
+                        }
                     }
                 }
             }
@@ -213,14 +221,10 @@ class FloatingClockController(
         _overlayState.update { it.copy(isVisible = false) }
     }
 
-    fun scheduleEvent(epochMillis: Long) {
-        val now = timeSyncManager.currentTimeMillis()
-        val triggered = if (epochMillis <= now) epochMillis else null
-        eventState.value = EventState(eventTimeMillis = epochMillis, triggeredAtMillis = triggered)
-    }
-
     fun clearEvent() {
         eventState.value = null
+        currentActiveEventId = null
+        eventEndTimer?.cancel()
         _overlayState.update {
             it.copy(eventTimeMillis = null, showProgressBar = false, progressFraction = 0f, pulsingStartedAtMillis = null)
         }

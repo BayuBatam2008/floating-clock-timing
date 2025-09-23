@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +55,20 @@ fun EventEditModal(
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false // Allow dragging
     )
+    
+    // Handle proper swipe down animation for dismiss
+    val scope = rememberCoroutineScope()
+    
+    // Function to properly close modal with animation
+    val closeModal = {
+        scope.launch {
+            bottomSheetState.hide()
+        }.invokeOnCompletion {
+            if (!bottomSheetState.isVisible) {
+                onDismiss()
+            }
+        }
+    }
     
     Box {
         ModalBottomSheet(
@@ -94,7 +109,7 @@ fun EventEditModal(
                     onClick = { 
                         eventViewModel.saveEvent { success ->
                             if (success) {
-                                onDismiss()
+                                closeModal() // Use proper animation close
                             }
                             // If failed, do nothing - snackbar will show and modal stays open
                         }
@@ -156,7 +171,7 @@ fun EventEditModal(
         }
     }
         
-        // SnackbarHost positioned at the bottom
+        // SnackbarHost positioned at the bottom of modal sheet
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)

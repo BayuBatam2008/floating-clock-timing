@@ -6,12 +6,11 @@ import com.floatingclock.timing.data.EventRepository
 
 class FloatingClockApplication : Application() {
     
-    lateinit var eventRepository: EventRepository
-        private set
+    val eventRepository: EventRepository
+        get() = AppDependencies.eventRepository
     
     override fun onCreate() {
         super.onCreate()
         AppDependencies.initialize(this)
-        eventRepository = EventRepository(this)
     }
 }

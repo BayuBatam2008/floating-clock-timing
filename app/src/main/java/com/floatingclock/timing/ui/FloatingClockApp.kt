@@ -128,6 +128,7 @@ import com.floatingclock.timing.ui.events.EventEditModal
 import com.floatingclock.timing.data.TimeSyncState
 import com.floatingclock.timing.data.model.FloatingClockStyle
 import com.floatingclock.timing.data.model.UserPreferences
+import com.floatingclock.timing.data.model.Line2DisplayMode
 import com.floatingclock.timing.overlay.FloatingOverlaySurface
 import com.floatingclock.timing.overlay.FloatingOverlayUiState
 import java.time.Instant
@@ -269,7 +270,6 @@ fun FloatingClockApp(
                     overlayState = overlayState,
                     hasOverlayPermission = hasOverlayPermission,
                     onRequestOverlayPermission = onRequestOverlayPermission,
-                    onScheduleEvent = viewModel::scheduleEvent,
                     onClearEvent = viewModel::clearEvent,
                     eventViewModel = eventViewModel
                 )
@@ -301,7 +301,6 @@ fun FloatingClockApp(
                 )
             }
         }
-    }
     
     // EventEditModal for quick add functionality
     val showEventDialog by eventViewModel.showEventDialog.collectAsState()
@@ -446,7 +445,6 @@ private fun ClockTab(
     overlayState: FloatingOverlayUiState,
     hasOverlayPermission: Boolean,
     onRequestOverlayPermission: () -> Unit,
-    onScheduleEvent: (Instant) -> Unit,
     onClearEvent: () -> Unit,
     eventViewModel: EventViewModel
 ) {
@@ -540,153 +538,6 @@ private fun PermissionCard(onRequest: () -> Unit) {
             )
             TextButton(onClick = onRequest) {
                 Text(text = stringResource(id = R.string.open_settings))
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalAnimationApi::class)
-@Composable
-private fun EventSchedulerCard(
-    currentInstant: Instant,
-    scheduledEvent: Instant?,
-    onSchedule: (Instant) -> Unit,
-    onClear: () -> Unit
-) {
-    // State for absolute time input (like alarm clock) - default to 00:00:00.000
-    var selectedSegment by rememberSaveable { mutableStateOf(0) } // 0=hours, 1=minutes, 2=seconds, 3=millis
-    var hours by rememberSaveable { mutableStateOf(0) }
-    var minutes by rememberSaveable { mutableStateOf(0) }
-    var seconds by rememberSaveable { mutableStateOf(0) }
-    var millis by rememberSaveable { mutableStateOf(0) }
-    var showError by rememberSaveable { mutableStateOf(false) }
-
-    // Auto-clear event when it has passed
-    LaunchedEffect(scheduledEvent, currentInstant) {
-        scheduledEvent?.let { event ->
-            if (currentInstant.isAfter(event)) {
-                onClear()
-            }
-        }
-    }
-
-    // Calculate target instant (today or tomorrow based on time comparison)
-    val targetInstant = remember(hours, minutes, seconds, millis, currentInstant) {
-        if (hours == 0 && minutes == 0 && seconds == 0 && millis == 0) {
-            null // Don't calculate if all values are 0
-        } else {
-            val currentZoned = currentInstant.atZone(ZoneId.systemDefault())
-            val currentDate = currentZoned.toLocalDate()
-            val targetTime = java.time.LocalTime.of(hours, minutes, seconds, millis * 1_000_000)
-            val targetDateTime = currentDate.atTime(targetTime)
-            
-            // If target time is before current time, schedule for tomorrow
-            val finalDateTime = if (targetDateTime.isBefore(currentZoned.toLocalDateTime()) || 
-                                   (targetDateTime.isEqual(currentZoned.toLocalDateTime()))) {
-                targetDateTime.plusDays(1)
-            } else {
-                targetDateTime
-            }
-            
-            finalDateTime.atZone(ZoneId.systemDefault()).toInstant()
-        }
-    }
-
-    Card(
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(text = stringResource(id = R.string.schedule_event), style = MaterialTheme.typography.titleMedium)
-
-            // Interactive Time Display with highlighting
-            InteractiveTimeDisplay(
-                hours = hours,
-                minutes = minutes,
-                seconds = seconds,
-                millis = millis,
-                selectedSegment = selectedSegment,
-                onSegmentClick = { segment -> selectedSegment = segment }
-            )
-
-            // Show when the alarm will trigger (only if time is set)
-            targetInstant?.let { target ->
-                val scheduleInfo = remember(target, currentInstant) {
-                    val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss.SSS")
-                    val isToday = target.atZone(ZoneId.systemDefault()).toLocalDate() == 
-                                 currentInstant.atZone(ZoneId.systemDefault()).toLocalDate()
-                    val dayText = if (isToday) "Today" else "Tomorrow"
-                    val timeText = formatter.format(target.atZone(ZoneId.systemDefault()))
-                    "$dayText at ${timeText.substring(11)}" // Remove date part for display
-                }
-                
-                Text(
-                    text = "Will trigger: $scheduleInfo",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            AnimatedVisibility(visible = showError, enter = fadeIn(), exit = fadeOut()) {
-                Text(
-                    text = stringResource(id = R.string.invalid_time_format),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            // Interactive Keypad for editing selected segment
-            InteractiveKeypad(
-                selectedSegment = selectedSegment,
-                hours = hours,
-                minutes = minutes,
-                seconds = seconds,
-                millis = millis,
-                onHoursChange = { hours = it.coerceIn(0, 23) },
-                onMinutesChange = { minutes = it.coerceIn(0, 59) },
-                onSecondsChange = { seconds = it.coerceIn(0, 59) },
-                onMillisChange = { millis = it.coerceIn(0, 999) }
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                androidx.compose.material3.Button(
-                    onClick = {
-                        targetInstant?.let { target ->
-                            showError = false
-                            onSchedule(target)
-                        } ?: run {
-                            showError = true
-                        }
-                    },
-                    enabled = targetInstant != null
-                ) {
-                    Text(text = stringResource(id = R.string.schedule_event))
-                }
-                TextButton(onClick = {
-                    hours = 0
-                    minutes = 0
-                    seconds = 0
-                    millis = 0
-                    selectedSegment = 0
-                    showError = false
-                    onClear()
-                }) {
-                    Text(text = stringResource(id = R.string.clear_event))
-                }
-            }
-
-            AnimatedVisibility(visible = scheduledEvent != null, enter = fadeIn(), exit = fadeOut()) {
-                scheduledEvent?.let { instant ->
-                    val formatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss.SSS") }
-                    Text(
-                        text = stringResource(
-                            id = R.string.scheduled_time,
-                            formatter.format(instant.atZone(ZoneId.systemDefault()))
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
     }
@@ -1019,6 +870,43 @@ private fun SyncTab(
     }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Last Sync Status Card (similar to SyncedTimeCard)
+        Card(shape = MaterialTheme.shapes.large) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Sync Status", 
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = timeState.lastSyncInstant?.let {
+                        stringResource(id = R.string.last_synced, syncFormatter.format(it.atZone(ZoneId.systemDefault())))
+                    } ?: stringResource(id = R.string.waiting_for_sync),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                timeState.nextSyncAtMillis?.let { next ->
+                    val remainingMinutes = ((next - System.currentTimeMillis()) / 60000L).coerceAtLeast(0)
+                    Text(
+                        text = stringResource(id = R.string.next_sync, remainingMinutes.toInt()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                AnimatedVisibility(visible = timeState.errorMessage != null, enter = fadeIn(), exit = fadeOut()) {
+                    Text(
+                        text = timeState.errorMessage.orEmpty(),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+        
         Card(shape = MaterialTheme.shapes.large) {
             Column(
                 modifier = Modifier
@@ -1137,29 +1025,11 @@ private fun SyncTab(
                         )
                     }
                 }
-                Text(
-                    text = timeState.lastSyncInstant?.let {
-                        stringResource(id = R.string.last_synced, syncFormatter.format(it.atZone(ZoneId.systemDefault())))
-                    } ?: stringResource(id = R.string.waiting_for_sync),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                timeState.nextSyncAtMillis?.let { next ->
-                    val remainingMinutes = ((next - System.currentTimeMillis()) / 60000L).coerceAtLeast(0)
-                    Text(
-                        text = stringResource(id = R.string.next_sync, remainingMinutes.toInt()),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                AnimatedVisibility(visible = timeState.errorMessage != null, enter = fadeIn(), exit = fadeOut()) {
-                    Text(
-                        text = timeState.errorMessage.orEmpty(),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
             }
         }
+        
+        // Add bottom spacing to avoid FAB overlap
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }
 
@@ -1184,6 +1054,8 @@ private fun CustomizationTab(
         Card(shape = MaterialTheme.shapes.large) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(text = stringResource(id = R.string.clock_style_title), style = MaterialTheme.typography.titleMedium)
+                
+                // Font & Display Group
                 Text(text = stringResource(id = R.string.font_scale), style = MaterialTheme.typography.titleSmall)
                 ValueIndicatorSlider(
                     value = style.fontScale,
@@ -1194,13 +1066,20 @@ private fun CustomizationTab(
                         "${String.format("%.1f", value)}x"
                     }
                 )
+                
+                // Divider between font scale and show millisecond
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                
                 SettingSwitchRow(
                     title = stringResource(id = R.string.show_millis),
                     checked = style.showMillis,
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showMillis = enabled) } }
                 )
                 
-                // Progress Indicator Switch
+                // Divider between Font & Progress groups
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                
+                // Progress Indicator Group
                 SettingSwitchRow(
                     title = "Enable Progress Indicator",
                     checked = style.showProgressIndicator,
@@ -1221,7 +1100,10 @@ private fun CustomizationTab(
                     )
                 }
                 
-                // Pulsing Switch
+                // Divider between Progress & Pulsing groups
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                
+                // Pulsing Group
                 SettingSwitchRow(
                     title = "Enable Pulsing",
                     checked = style.enablePulsing,
@@ -1237,7 +1119,10 @@ private fun CustomizationTab(
                     )
                 }
                 
-                // Line 2 Display Mode
+                // Divider between Pulsing & Line 2 Display groups
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                
+                // Line 2 Display Group
                 Text(text = "Line 2 Display", style = MaterialTheme.typography.titleSmall)
                 ConnectedButtonGroup(
                     selectedOption = style.line2DisplayMode,
@@ -1641,8 +1526,8 @@ private fun LivePreviewClock(
             )
             
             // Line 2: Based on display mode selection
-            when (userPreferences.floatingClockStyle.line2DisplayMode) {
-                "DATE_ONLY" -> {
+            when (userPreferences.floatingClockStyle.getLine2DisplayMode()) {
+                Line2DisplayMode.DATE_ONLY -> {
                     Text(
                         text = currentDate,
                         style = MaterialTheme.typography.bodyLarge.copy(
@@ -1653,7 +1538,7 @@ private fun LivePreviewClock(
                         textAlign = TextAlign.Start
                     )
                 }
-                "TARGET_TIME_ONLY" -> {
+                Line2DisplayMode.TARGET_TIME_ONLY -> {
                     targetTime?.let { target ->
                         Text(
                             text = target,
@@ -1666,7 +1551,7 @@ private fun LivePreviewClock(
                         )
                     }
                 }
-                "BOTH" -> {
+                Line2DisplayMode.BOTH -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = currentDate,
@@ -1690,20 +1575,8 @@ private fun LivePreviewClock(
                         }
                     }
                 }
-                "NONE" -> {
+                Line2DisplayMode.NONE -> {
                     // Show nothing for line 2
-                }
-                else -> {
-                    // Default fallback to date
-                    Text(
-                        text = currentDate,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = secondaryAccentColor,
-                        textAlign = TextAlign.Start
-                    )
                 }
             }
             

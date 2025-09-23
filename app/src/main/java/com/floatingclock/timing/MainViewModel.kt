@@ -52,10 +52,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         floatingClockController.hideOverlay(getApplication())
     }
 
-    fun scheduleEvent(instant: Instant) {
-        floatingClockController.scheduleEvent(instant.toEpochMilli())
-    }
-
     fun clearEvent() {
         floatingClockController.clearEvent()
     }

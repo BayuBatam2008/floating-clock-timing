@@ -3,10 +3,14 @@ package com.floatingclock.timing.data
 import android.content.Context
 import android.content.SharedPreferences
 import com.floatingclock.timing.data.model.Event
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -26,6 +30,42 @@ class EventRepository(context: Context) {
     
     init {
         loadEvents()
+        startBackgroundCleanup()
+    }
+    
+    private fun startBackgroundCleanup() {
+        // Start background cleanup coroutine
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            while (true) {
+                try {
+                    cleanupExpiredEvents()
+                    delay(60_000) // Check every minute
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    delay(300_000) // Wait 5 minutes before retry if error
+                }
+            }
+        }
+    }
+    
+    private suspend fun cleanupExpiredEvents() {
+        val now = System.currentTimeMillis()
+        val fiveMinutesAgo = now - (5 * 60 * 1000) // 5 minutes ago
+        
+        val currentEvents = _events.value.toMutableList()
+        val eventsToRemove = currentEvents.filter { event ->
+            val eventDateTime = event.getEventDateTime()
+            // Remove events that are more than 5 minutes past their target time
+            eventDateTime != null && eventDateTime < fiveMinutesAgo
+        }
+        
+        if (eventsToRemove.isNotEmpty()) {
+            eventsToRemove.forEach { event ->
+                currentEvents.removeAll { it.id == event.id }
+            }
+            _events.value = currentEvents.sortedWith(compareBy({ it.date }, { it.targetTime }))
+            saveEvents()
+        }
     }
     
     private fun loadEvents() {
