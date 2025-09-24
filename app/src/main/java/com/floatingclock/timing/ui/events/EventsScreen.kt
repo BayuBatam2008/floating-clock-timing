@@ -26,12 +26,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.platform.LocalContext
 import com.floatingclock.timing.data.model.Event
 import com.floatingclock.timing.FloatingClockApplication
 
@@ -140,6 +141,18 @@ private fun EmptyEventsState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Empty state illustration
+        Icon(
+            painter = androidx.compose.ui.res.painterResource(
+                id = com.floatingclock.timing.R.drawable.empty_events_illustration
+            ),
+            contentDescription = null,
+            modifier = Modifier.size(120.dp),
+            tint = Color.Unspecified
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
         Text(
             text = "No events yet",
             style = MaterialTheme.typography.headlineSmall,

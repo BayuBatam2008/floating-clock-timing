@@ -1,0 +1,90 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    
+    <!-- Background circle -->
+    <path
+        android:fillColor="@color/empty_state_bg"
+        android:pathData="M60,15a45,45 0 1,1 0,90a45,45 0 1,1 0,-90z" />
+    
+    <!-- Calendar base -->
+    <path
+        android:fillColor="@color/empty_state_calendar"
+        android:strokeColor="@color/empty_state_border"
+        android:strokeWidth="1.5"
+        android:pathData="M30,30h60v50a8,8 0 0,1 -8,8H38a8,8 0 0,1 -8,-8z" />
+    
+    <!-- Calendar header -->
+    <path
+        android:fillColor="@color/empty_state_header"
+        android:pathData="M30,30h60v15H30z" />
+    
+    <!-- Calendar binding holes -->
+    <path
+        android:fillColor="@color/empty_state_accent"
+        android:pathData="M40,25a2.5,2.5 0 1,1 0,5a2.5,2.5 0 1,1 0,-5z" />
+    <path
+        android:fillColor="@color/empty_state_accent"
+        android:pathData="M50,25a2.5,2.5 0 1,1 0,5a2.5,2.5 0 1,1 0,-5z" />
+    <path
+        android:fillColor="@color/empty_state_accent"
+        android:pathData="M70,25a2.5,2.5 0 1,1 0,5a2.5,2.5 0 1,1 0,-5z" />
+    <path
+        android:fillColor="@color/empty_state_accent"
+        android:pathData="M80,25a2.5,2.5 0 1,1 0,5a2.5,2.5 0 1,1 0,-5z" />
+    
+    <!-- Calendar grid lines -->
+    <path
+        android:strokeColor="@color/empty_state_grid"
+        android:strokeWidth="1"
+        android:pathData="M30,55h60" />
+    <path
+        android:strokeColor="@color/empty_state_grid"
+        android:strokeWidth="1"
+        android:pathData="M30,65h60" />
+    <path
+        android:strokeColor="@color/empty_state_grid"
+        android:strokeWidth="1"
+        android:pathData="M30,75h60" />
+    
+    <!-- Calendar vertical lines -->
+    <path
+        android:strokeColor="@color/empty_state_grid"
+        android:strokeWidth="1"
+        android:pathData="M45,45v35" />
+    <path
+        android:strokeColor="@color/empty_state_grid"
+        android:strokeWidth="1"
+        android:pathData="M60,45v35" />
+    <path
+        android:strokeColor="@color/empty_state_grid"
+        android:strokeWidth="1"
+        android:pathData="M75,45v35" />
+    
+    <!-- Clock -->
+    <path
+        android:fillColor="@color/empty_state_clock_bg"
+        android:strokeColor="@color/empty_state_border"
+        android:strokeWidth="2"
+        android:pathData="M72,95a12,12 0 1,1 0,24a12,12 0 1,1 0,-24z" />
+    
+    <!-- Clock hands pointing to 12 -->
+    <path
+        android:strokeColor="@color/empty_state_clock_hands"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M72,107l0,-6" />
+    <path
+        android:strokeColor="@color/empty_state_clock_hands"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M72,107l0,-8" />
+    
+    <!-- Clock center -->
+    <path
+        android:fillColor="@color/empty_state_clock_hands"
+        android:pathData="M72,106.5a1,1 0 1,1 0,2a1,1 0 1,1 0,-2z" />
+        
+</vector>

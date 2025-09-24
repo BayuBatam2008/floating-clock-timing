@@ -1,12 +1,16 @@
 package com.floatingclock.timing
 
+import android.Manifest
 import android.app.PictureInPictureParams
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Rational
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -56,9 +60,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.floatingclock.timing.ui.FloatingClockApp
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
+import com.floatingclock.timing.notification.EventReminderService
+import com.floatingclock.timing.notification.EfficientNotificationManager
+import com.floatingclock.timing.data.PerformanceOptimizations
+
 
 // Data class for progress indicator information
 data class ProgressInfo(
@@ -72,10 +82,27 @@ class MainActivity : ComponentActivity() {
     
     // State for PiP mode detection
     private var isPiPModeState: MutableState<Boolean> = mutableStateOf(false)
+    
+    // Efficient notification manager - JAUH LEBIH HEMAT RESOURCE!
+    private lateinit var efficientNotificationManager: EfficientNotificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Initialize efficient notification manager - TIDAK PERLU POLLING!
+        efficientNotificationManager = EfficientNotificationManager(this)
+        
+        // Request notification permission for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
+        }
+        
+        // Setup efficient event notification scheduling
+        setupEfficientEventNotifications()
+        
         setContent {
             FloatingClockTheme {
                 val context = LocalContext.current
@@ -146,6 +173,46 @@ class MainActivity : ComponentActivity() {
             enterPictureInPictureMode()
         }
     }
+    
+    /**
+     * Setup efficient event notifications - JAUH LEBIH HEMAT RESOURCE!
+     * Menggunakan AlarmManager untuk schedule tepat di waktu event,
+     * bukan polling setiap 30 detik seperti sebelumnya.
+     */
+    private fun setupEfficientEventNotifications() {
+        // Stop old service if running
+        val oldServiceIntent = android.content.Intent(this, EventReminderService::class.java)
+        stopService(oldServiceIntent)
+        
+        // Monitor events and schedule notifications efficiently
+        lifecycleScope.launch {
+            viewModel.overlayState.collect { overlayState ->
+                if (overlayState.eventTimeMillis != null) {
+                    val eventTime = overlayState.eventTimeMillis
+                    val now = System.currentTimeMillis()
+                    
+                    // Hanya schedule jika event di masa depan
+                    if (eventTime > now) {
+                        val eventName = "Scheduled Event" // You can customize this
+                        efficientNotificationManager.scheduleEventNotification(eventName, eventTime)
+                        android.util.Log.d("EfficientNotif", "Scheduled notification for $eventTime")
+                    }
+                } else {
+                    // Cancel notification jika tidak ada event
+                    efficientNotificationManager.cancelScheduledNotification()
+                    android.util.Log.d("EfficientNotif", "Cancelled scheduled notification")
+                }
+            }
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cancel notifications when app is destroyed
+        if (::efficientNotificationManager.isInitialized) {
+            efficientNotificationManager.cancelScheduledNotification()
+        }
+    }
 }
 
 @Composable
@@ -158,8 +225,12 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     var pulsingStartTime by remember { mutableStateOf(0L) }
     var lastTimeDifference by remember { mutableStateOf(Long.MAX_VALUE) }
     
-    // Progress state
+    // Progress state  
     var progressInfo by remember { mutableStateOf(ProgressInfo(0f, false)) }
+    
+    // Performance optimizations
+    val frameOptimizer = PerformanceOptimizations.rememberFrameRateOptimizer()
+    val throttledUpdater = remember { PerformanceOptimizations.ThrottledUpdater(16L) }
     
     // Get states including user preferences
     val timeState by viewModel.timeState.collectAsState()
@@ -177,9 +248,26 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     }
     val dateFormatter = remember { java.time.format.DateTimeFormatter.ofPattern("EEE, dd MMM yyyy") }
     
+    // Performance monitoring
+    PerformanceOptimizations.PerformanceMonitor("PiPClock") { frameRate, memoryMb ->
+        // Log performance metrics if needed for debugging
+    }
+    
     // Single optimized LaunchedEffect for both time and progress updates
     LaunchedEffect(timeState, scheduledEventTime, userPreferences.floatingClockStyle.showMillis, userPreferences.floatingClockStyle.progressActivationSeconds) {
         while (true) {
+            // Skip frame if performance optimizer says so
+            if (frameOptimizer.shouldSkipFrame()) {
+                delay(1L)
+                continue
+            }
+            
+            // Throttled updates for better performance
+            if (!throttledUpdater.shouldUpdate()) {
+                delay(4L)
+                continue
+            }
+            
             // Get accurate time once per frame
             val now = if (timeState.isInitialized) {
                 val currentState = timeState
@@ -237,7 +325,7 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 lastTimeDifference = Long.MAX_VALUE
             }
             
-            delay(16) // Single 60 FPS update loop
+            delay(8) // Optimized 120 FPS update loop for smoother animation
         }
     }
     

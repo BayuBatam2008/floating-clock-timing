@@ -12,11 +12,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
@@ -46,6 +47,7 @@ import kotlin.math.abs
 import kotlinx.coroutines.delay
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.data.model.Line2DisplayMode
+import com.floatingclock.timing.data.PerformanceOptimizations
 
 @Composable
 fun FloatingOverlaySurface(
@@ -79,9 +81,25 @@ fun FloatingOverlaySurface(
 
     var smoothCurrentMillis by remember { mutableLongStateOf(state.currentTimeMillis) }
     
+    // Performance optimizations for overlay
+    val frameOptimizer = PerformanceOptimizations.rememberFrameRateOptimizer()
+    val throttledUpdater = remember { PerformanceOptimizations.ThrottledUpdater(8L) }
+    
     LaunchedEffect(style.showMillis) {
         if (style.showMillis) {
             while (true) {
+                // Skip frame if performance optimizer says so
+                if (frameOptimizer.shouldSkipFrame()) {
+                    delay(1L)
+                    continue
+                }
+                
+                // Throttled updates for better performance
+                if (!throttledUpdater.shouldUpdate()) {
+                    delay(2L)
+                    continue
+                }
+                
                 val timeSyncManager = AppDependencies.timeSyncManager
                 val timeState = timeSyncManager.state.value
                 
@@ -90,7 +108,7 @@ fun FloatingOverlaySurface(
                 } else {
                     System.currentTimeMillis()
                 }
-                delay(16L)
+                delay(8L) // Optimized 120 FPS for smoother milliseconds
             }
         } else {
             smoothCurrentMillis = state.currentTimeMillis
@@ -179,23 +197,31 @@ fun FloatingOverlaySurface(
                         }
                     }
                     Line2DisplayMode.BOTH -> {
-                        Text(
-                            text = dateText,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
-                            ),
-                            color = secondaryAccentColor,
-                            textAlign = TextAlign.Center
-                        )
-                        eventInfo?.let { info ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                text = info,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
+                                text = dateText,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
                                 ),
                                 color = secondaryAccentColor,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Start
                             )
+                            eventInfo?.let { info ->
+                                Text(
+                                    text = info,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    color = secondaryAccentColor,
+                                    textAlign = TextAlign.End
+                                )
+                            }
                         }
                     }
                     Line2DisplayMode.NONE -> {

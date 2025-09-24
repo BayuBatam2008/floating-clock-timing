@@ -2,4 +2,14 @@
     <color name="seed">#3A7BD5</color>
     <color name="floating_green">#3DDC84</color>
     <color name="floating_warning">#FFB300</color>
+    
+    <!-- Empty State Colors -->
+    <color name="empty_state_bg">#F5F7FA</color>
+    <color name="empty_state_calendar">#FFFFFF</color>
+    <color name="empty_state_header">#E3F2FD</color>
+    <color name="empty_state_border">#BDBDBD</color>
+    <color name="empty_state_grid">#E0E0E0</color>
+    <color name="empty_state_accent">#42A5F5</color>
+    <color name="empty_state_clock_bg">#FFFFFF</color>
+    <color name="empty_state_clock_hands">#666666</color>
 </resources>

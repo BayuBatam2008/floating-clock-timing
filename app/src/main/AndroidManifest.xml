@@ -3,6 +3,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
@@ -32,6 +36,19 @@
             android:name=".overlay.FloatingClockService"
             android:exported="false"
             android:stopWithTask="false" />
+            
+        <service
+            android:name=".notification.EventReminderService"
+            android:exported="false"
+            android:enabled="true" />
+            
+        <receiver
+            android:name=".notification.NotificationDismissReceiver"
+            android:exported="false" />
+            
+        <receiver
+            android:name=".notification.EventAlarmReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>
