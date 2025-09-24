@@ -3,32 +3,40 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    
+    <!-- Centered, perfectly minimalist clock -->
     <group
-        android:scaleX="0.85"
-        android:scaleY="0.85"
-        android:translateX="8.1"
-        android:translateY="8.1">
+        android:translateX="54"
+        android:translateY="54">
+        
+        <!-- Main clock circle -->
         <path
-            android:fillColor="@android:color/white"
-            android:pathData="M54,12a42,42 0 1,1 0,84a42,42 0 1,1 0,-84z" />
+            android:fillColor="#FFFFFF"
+            android:pathData="M0,0m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
+        
+        <!-- Clock hands - showing 10:10 (classic time) -->
+        <!-- Hour hand -->
         <path
-            android:fillColor="@color/seed"
-            android:pathData="M54,24a30,30 0 1,1 0,60a30,30 0 1,1 0,-60z" />
+            android:fillColor="#2C5AA0"
+            android:pathData="M-1,-2h2v-12h-2z"
+            android:fillAlpha="0.9" />
+        
+        <!-- Minute hand -->
         <path
-            android:fillColor="@android:color/white"
-            android:pathData="M54,30a24,24 0 1,1 0,48a24,24 0 1,1 0,-48z" />
+            android:fillColor="#2C5AA0"
+            android:pathData="M-0.5,-2h1v-16h-1z"
+            android:fillAlpha="0.9" />
+        
+        <!-- Center dot -->
         <path
-            android:fillColor="@color/floating_green"
-            android:pathData="M54,20a2.5,2.5 0 1,1 0,5a2.5,2.5 0 1,1 0,-5z" />
+            android:fillColor="#3DDC84"
+            android:pathData="M0,0m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+        
+        <!-- Single floating element for "floating" concept -->
         <path
-            android:fillColor="@color/seed"
-            android:pathData="M54,54l0,-20l3,0l0,20z" />
-        <path
-            android:fillColor="@color/seed"
-            android:pathData="M54,54l14,10l-2,2.8l-14,-10z" />
-        <path
-            android:fillColor="@color/floating_green"
-            android:pathData="M54,46a8,8 0 1,1 0,16a8,8 0 1,1 0,-16z"
-            android:fillAlpha="0.12" />
+            android:fillColor="#3DDC84"
+            android:pathData="M20,-12m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0"
+            android:fillAlpha="0.7" />
+            
     </group>
 </vector>

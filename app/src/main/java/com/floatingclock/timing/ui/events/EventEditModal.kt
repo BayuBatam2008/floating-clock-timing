@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -31,6 +33,7 @@ fun EventEditModal(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     
     // Collect individual states instead of uiState
     val eventName by eventViewModel.eventName.collectAsState()
@@ -49,14 +52,10 @@ fun EventEditModal(
             }
         }
     }
-    
-    // Use Material 3 ModalBottomSheet with built-in animations
-    val bottomSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false // Allow dragging
-    )
-        ModalBottomSheet(
+
+    // Simple ModalBottomSheet with default fade animation
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = bottomSheetState,
         dragHandle = {
             Box(
                 modifier = Modifier

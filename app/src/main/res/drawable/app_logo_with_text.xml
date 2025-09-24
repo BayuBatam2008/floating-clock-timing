@@ -1,0 +1,137 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="80dp"
+    android:viewportWidth="200"
+    android:viewportHeight="80">
+    
+    <!-- Clock icon (smaller version) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,20a20,20 0 1,1 0,40a20,20 0 1,1 0,-40z" />
+    
+    <!-- Clock face -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M40,25a15,15 0 1,1 0,30a15,15 0 1,1 0,-30z"
+        android:fillAlpha="0.05" />
+    
+    <!-- Hour markers -->
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M40,25a1,3 0 1,1 0,2a1,3 0 1,1 0,-2z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M40,53a1,3 0 1,1 0,2a1,3 0 1,1 0,-2z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M53,40a3,1 0 1,1 2,0a3,1 0 1,1 -2,0z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M25,40a3,1 0 1,1 2,0a3,1 0 1,1 -2,0z" />
+    
+    <!-- Clock hands -->
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M40,40l-3,-5l1,-0.5l3,5z"
+        android:strokeWidth="1"
+        android:strokeColor="#2C5AA0" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M40,40l5,-3l0.5,1l-5,3z"
+        android:strokeWidth="1"
+        android:strokeColor="#2C5AA0" />
+    
+    <!-- Center -->
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M40,39a1,1 0 1,1 0,2a1,1 0 1,1 0,-2z" />
+    
+    <!-- Floating elements -->
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M60,25a2,2 0 1,1 0,4a2,2 0 1,1 0,-4z"
+        android:fillAlpha="0.8" />
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M20,51a2,2 0 1,1 0,4a2,2 0 1,1 0,-4z"
+        android:fillAlpha="0.8" />
+    
+    <!-- App name text placeholder shapes (Material 3 style) -->
+    <!-- "FLOATING" -->
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M80,25h8v3h-8z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M90,25h6v3h-6z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M98,25h4v3h-4z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M104,25h8v3h-8z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M114,25h6v3h-6z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M122,25h8v3h-8z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M132,25h6v3h-6z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M140,25h8v3h-8z" />
+    
+    <!-- "CLOCK" -->
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M80,35h6v3h-6z" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M88,35h6v3h-6z" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M96,35h4v3h-4z" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M102,35h6v3h-6z" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M110,35h6v3h-6z" />
+    
+    <!-- "TIMING" -->
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M80,45h6v3h-6z" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M88,45h2v3h-2z" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M92,45h8v3h-8z" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M102,45h2v3h-2z" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M106,45h8v3h-8z" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M116,45h8v3h-8z" />
+    
+    <!-- Decorative dots -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M155,30a2,2 0 1,1 0,4a2,2 0 1,1 0,-4z"
+        android:fillAlpha="0.6" />
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M165,35a2,2 0 1,1 0,4a2,2 0 1,1 0,-4z"
+        android:fillAlpha="0.6" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M175,40a2,2 0 1,1 0,4a2,2 0 1,1 0,-4z"
+        android:fillAlpha="0.6" />
+        
+</vector>

@@ -3,7 +3,16 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    
+    <!-- Primary background -->
     <path
-        android:fillColor="@color/seed"
+        android:fillColor="#3A7BD5"
         android:pathData="M0,0h108v108h-108z" />
+    
+    <!-- Very subtle gradient overlay -->
+    <path
+        android:fillColor="#4A8BE8"
+        android:pathData="M0,0h108v54h-108z"
+        android:fillAlpha="0.4" />
+        
 </vector>

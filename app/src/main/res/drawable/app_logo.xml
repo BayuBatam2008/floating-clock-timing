@@ -1,0 +1,120 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    
+    <!-- Main clock circle with Material 3 elevation -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,15a45,45 0 1,1 0,90a45,45 0 1,1 0,-90z" />
+    
+    <!-- Clock face shadow -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M60,20a40,40 0 1,1 0,80a40,40 0 1,1 0,-80z"
+        android:fillAlpha="0.05" />
+    
+    <!-- Hour markers - Material 3 style -->
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M60,25a3,8 0 1,1 0,6a3,8 0 1,1 0,-6z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M60,89a3,8 0 1,1 0,6a3,8 0 1,1 0,-6z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M89,60a8,3 0 1,1 6,0a8,3 0 1,1 -6,0z" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M25,60a8,3 0 1,1 6,0a8,3 0 1,1 -6,0z" />
+    
+    <!-- Secondary hour markers -->
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M78.6,33.4a2,5 0 1,1 0,4a2,5 0 1,1 0,-4z"
+        android:fillAlpha="0.6" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M41.4,33.4a2,5 0 1,1 0,4a2,5 0 1,1 0,-4z"
+        android:fillAlpha="0.6" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M78.6,86.6a2,5 0 1,1 0,4a2,5 0 1,1 0,-4z"
+        android:fillAlpha="0.6" />
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M41.4,86.6a2,5 0 1,1 0,4a2,5 0 1,1 0,-4z"
+        android:fillAlpha="0.6" />
+    
+    <!-- Clock hands showing 10:10 -->
+    <!-- Hour hand -->
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M60,60l-10,-15l3,-1.5l10,15z"
+        android:strokeWidth="2"
+        android:strokeColor="#2C5AA0"
+        android:strokeLineCap="round" />
+    
+    <!-- Minute hand -->
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M60,60l15,-10l1.5,3l-15,10z"
+        android:strokeWidth="2"
+        android:strokeColor="#2C5AA0"
+        android:strokeLineCap="round" />
+    
+    <!-- Center dot -->
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M60,57a3,3 0 1,1 0,6a3,3 0 1,1 0,-6z" />
+    
+    <!-- Floating elements for app logo -->
+    <!-- Floating time indicators -->
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M95,30a8,8 0 1,1 0,16a8,8 0 1,1 0,-16z"
+        android:fillAlpha="0.9" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M95,32a6,6 0 1,1 0,12a6,6 0 1,1 0,-12z" />
+    <!-- Millisecond text -->
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M93,36h4v2h-4z" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M93,40h4v1h-4z" />
+    
+    <!-- Floating precision indicator -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M25,74a8,8 0 1,1 0,16a8,8 0 1,1 0,-16z"
+        android:fillAlpha="0.9" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M25,76a6,6 0 1,1 0,12a6,6 0 1,1 0,-12z" />
+    <!-- Precision dots -->
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M24,80a1,1 0 1,1 0,2a1,1 0 1,1 0,-2z" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M26,82a1,1 0 1,1 0,2a1,1 0 1,1 0,-2z" />
+    <path
+        android:fillColor="#2C5AA0"
+        android:pathData="M24,84a1,1 0 1,1 0,2a1,1 0 1,1 0,-2z" />
+    
+    <!-- App title floating element -->
+    <path
+        android:fillColor="#3A7BD5"
+        android:pathData="M90,85a6,20 0 1,1 0,12a6,20 0 1,1 0,-12z"
+        android:fillAlpha="0.2" />
+    
+    <!-- Subtle glow effect -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,25a35,35 0 1,1 0,70a35,35 0 1,1 0,-70z"
+        android:fillAlpha="0.1" />
+        
+</vector>
