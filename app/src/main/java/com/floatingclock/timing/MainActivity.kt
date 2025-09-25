@@ -67,6 +67,7 @@ import com.floatingclock.timing.ui.FloatingClockApp
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
 import com.floatingclock.timing.notification.EventReminderService
 import com.floatingclock.timing.notification.EfficientNotificationManager
+import com.floatingclock.timing.notification.SimpleNotificationTester
 import com.floatingclock.timing.data.PerformanceOptimizations
 
 
@@ -85,23 +86,25 @@ class MainActivity : ComponentActivity() {
     
     // Efficient notification manager - JAUH LEBIH HEMAT RESOURCE!
     private lateinit var efficientNotificationManager: EfficientNotificationManager
+    
+    // Simple notification tester untuk debugging
+    private lateinit var notificationTester: SimpleNotificationTester
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Initialize efficient notification manager - TIDAK PERLU POLLING!
+        // Initialize notification systems
         efficientNotificationManager = EfficientNotificationManager(this)
+        notificationTester = SimpleNotificationTester(this)
         
-        // Request notification permission for Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
-            }
-        }
+        // FORCE REQUEST ALL PERMISSIONS
+        requestAllNotificationPermissions()
         
-        // Setup efficient event notification scheduling
+        // Setup efficient event notification scheduling untuk REAL EVENTS
         setupEfficientEventNotifications()
+        
+        android.util.Log.d("MainActivity", "✅ Notification system ready for real events!")
         
         setContent {
             FloatingClockTheme {
@@ -174,9 +177,12 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    // Track last scheduled event to avoid duplicate scheduling
+    private var lastScheduledEventTime: Long? = null
+    
     /**
-     * Setup efficient event notifications - JAUH LEBIH HEMAT RESOURCE!
-     * Menggunakan AlarmManager untuk schedule tepat di waktu event,
+     * Setup efficient 5-minute reminder notifications - JAUH LEBIH HEMAT RESOURCE!
+     * Menggunakan AlarmManager untuk schedule reminder 5 MENIT SEBELUM event,
      * bukan polling setiap 30 detik seperti sebelumnya.
      */
     private fun setupEfficientEventNotifications() {
@@ -184,24 +190,95 @@ class MainActivity : ComponentActivity() {
         val oldServiceIntent = android.content.Intent(this, EventReminderService::class.java)
         stopService(oldServiceIntent)
         
-        // Monitor events and schedule notifications efficiently
+        android.util.Log.d("EfficientNotif", "🎯 Setting up real event notification monitoring...")
+        
+        // Monitor events and schedule notifications efficiently with debouncing
         lifecycleScope.launch {
-            viewModel.overlayState.collect { overlayState ->
-                if (overlayState.eventTimeMillis != null) {
-                    val eventTime = overlayState.eventTimeMillis
+            // Combine both states untuk get complete event info
+            kotlinx.coroutines.flow.combine(
+                viewModel.overlayState,
+                viewModel.userPreferences
+            ) { overlayState, userPrefs ->
+                Pair(overlayState, userPrefs)
+            }.collect { (overlayState, userPrefs) ->
+                val newEventTime = overlayState.eventTimeMillis
+                
+                // Skip if same event already scheduled (avoid spam)
+                if (newEventTime == lastScheduledEventTime) {
+                    return@collect
+                }
+                
+                lastScheduledEventTime = newEventTime
+                
+                if (newEventTime != null) {
                     val now = System.currentTimeMillis()
+                    val eventName = getEventDisplayName(newEventTime)
+                    val fiveMinutesInMillis = 5 * 60 * 1000L
+                    val timeUntilEvent = newEventTime - now
                     
-                    // Hanya schedule jika event di masa depan
-                    if (eventTime > now) {
-                        val eventName = "Scheduled Event" // You can customize this
-                        efficientNotificationManager.scheduleEventNotification(eventName, eventTime)
-                        android.util.Log.d("EfficientNotif", "Scheduled notification for $eventTime")
+                    android.util.Log.i("EfficientNotif", "📅 Real event detected: $eventName at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date(newEventTime))}")
+                    android.util.Log.i("EfficientNotif", "   ⏳ Time until event: ${timeUntilEvent / 60000} minutes")
+                    
+                    // Schedule 5-minute reminder HANYA jika event masih lebih dari 5 menit
+                    if (timeUntilEvent > fiveMinutesInMillis) {
+                        efficientNotificationManager.scheduleEventNotification(eventName, newEventTime)
+                        android.util.Log.i("EfficientNotif", "⏰ Scheduled 5-minute reminder for: $eventName")
+                    } else if (timeUntilEvent > 0) {
+                        android.util.Log.w("EfficientNotif", "⚠️ Event too close (${timeUntilEvent / 60000} minutes) - no 5-minute reminder needed")
+                    } else {
+                        android.util.Log.w("EfficientNotif", "⚠️ Event is in the past - no reminder needed")
                     }
                 } else {
                     // Cancel notification jika tidak ada event
                     efficientNotificationManager.cancelScheduledNotification()
-                    android.util.Log.d("EfficientNotif", "Cancelled scheduled notification")
+                    android.util.Log.i("EfficientNotif", "❌ No active events - cancelled 5-minute reminders")
                 }
+            }
+        }
+    }
+    
+    /**
+     * Get display name untuk event berdasarkan waktu
+     */
+    private fun getEventDisplayName(eventTimeMillis: Long): String {
+        val formatter = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+        val timeString = formatter.format(java.util.Date(eventTimeMillis))
+        return "Event at $timeString"
+    }
+    
+    private fun requestAllNotificationPermissions() {
+        android.util.Log.d("MainActivity", "=== REQUESTING ALL PERMISSIONS ===")
+        
+        // Request notification permission for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                android.util.Log.d("MainActivity", "Requesting POST_NOTIFICATIONS permission")
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+            } else {
+                android.util.Log.d("MainActivity", "POST_NOTIFICATIONS already granted")
+            }
+        }
+        
+        // Check exact alarm permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.SCHEDULE_EXACT_ALARM) != PackageManager.PERMISSION_GRANTED) {
+                android.util.Log.d("MainActivity", "SCHEDULE_EXACT_ALARM permission not granted")
+            } else {
+                android.util.Log.d("MainActivity", "SCHEDULE_EXACT_ALARM already granted")
+            }
+        }
+    }
+    
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        android.util.Log.d("MainActivity", "Permission result: code=$requestCode, results=${grantResults.contentToString()}")
+        
+        if (requestCode == 1001) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                android.util.Log.d("MainActivity", "✅ POST_NOTIFICATIONS permission granted!")
+                android.util.Log.d("MainActivity", "🎯 5-minute reminder system ready!")
+            } else {
+                android.util.Log.e("MainActivity", "❌ POST_NOTIFICATIONS permission denied!")
             }
         }
     }
@@ -419,6 +496,7 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Left: Date (tanggal left aligned)
                         Text(
                             text = currentDate,
                             style = MaterialTheme.typography.bodyLarge.copy(
@@ -426,8 +504,10 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                                 fontWeight = FontWeight.Medium
                             ),
                             color = passiveColor,
-                            textAlign = TextAlign.Start
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
+                        // Right: Target Time (target time right aligned dengan space di tengah)
                         targetTime?.let { target ->
                             Text(
                                 text = target,
@@ -436,7 +516,8 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                                     fontWeight = FontWeight.Medium
                                 ),
                                 color = if (progressInfo.isActive) primaryColor else passiveColor,
-                                textAlign = TextAlign.End
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                         }
                     }
