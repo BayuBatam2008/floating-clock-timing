@@ -228,7 +228,6 @@ class EventAlarmReceiver : BroadcastReceiver() {
         val eventName = intent.getStringExtra(EfficientNotificationManager.EXTRA_EVENT_NAME) ?: "Event"
         val eventTime = intent.getLongExtra(EfficientNotificationManager.EXTRA_EVENT_TIME, 0L)
         val notificationTime = intent.getLongExtra("notification_time", 0L)
-        val scheduledAt = intent.getLongExtra("scheduled_at", 0L)
         
         val actualDelay = now - notificationTime // Delay from expected notification time
         val minutesUntilEvent = (eventTime - now) / (60 * 1000L) // Minutes until actual event

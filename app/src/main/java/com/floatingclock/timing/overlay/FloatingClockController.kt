@@ -34,7 +34,7 @@ class FloatingClockController(
 
     private val eventState = MutableStateFlow<EventState?>(null)
     private var currentActiveEventId: String? = null
-    private var eventEndTimer: kotlinx.coroutines.Job? = null
+    private var eventEndTimer: Job? = null
 
     init {
         scope.launch {

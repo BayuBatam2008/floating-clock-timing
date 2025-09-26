@@ -33,7 +33,6 @@ fun EventEditModal(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     
     // Collect individual states instead of uiState
     val eventName by eventViewModel.eventName.collectAsState()

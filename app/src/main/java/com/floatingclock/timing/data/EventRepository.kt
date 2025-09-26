@@ -48,7 +48,7 @@ class EventRepository(context: Context) {
         }
     }
     
-    private suspend fun cleanupExpiredEvents() {
+    private fun cleanupExpiredEvents() {
         val now = System.currentTimeMillis()
         val fiveMinutesAgo = now - (5 * 60 * 1000) // 5 minutes ago
         
@@ -171,17 +171,8 @@ class EventRepository(context: Context) {
         }
     }
     
-    fun getEvent(eventId: String): Event? {
-        return _events.value.find { it.id == eventId }
-    }
-    
     fun getUpcomingEvents(): List<Event> {
         return _events.value.filter { it.isEnabled && it.isUpcoming() }
-    }
-    
-    fun getTodayEvents(): List<Event> {
-        val today = LocalDate.now().toString()
-        return _events.value.filter { it.date == today && it.isEnabled }
     }
     
     // New functions for target time functionality
@@ -197,11 +188,6 @@ class EventRepository(context: Context) {
             eventDateTime >= now && 
             eventDateTime <= oneHourLater
         }.sortedBy { it.getEventDateTime() }
-    }
-    
-    fun getNextUpcomingEvent(): Event? {
-        val upcomingEvents = getUpcomingEvents()
-        return upcomingEvents.minByOrNull { it.getEventDateTime() ?: Long.MAX_VALUE }
     }
     
     fun getActiveTargetEvent(): Event? {

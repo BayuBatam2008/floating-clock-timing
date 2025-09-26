@@ -220,7 +220,7 @@ fun FloatingClockApp(
         },
         bottomBar = {
             NavigationBar {
-                MainTab.values().forEach { tab ->
+                MainTab.entries.forEach { tab ->
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
@@ -803,7 +803,7 @@ private fun InteractiveKeypad(
                                         "⌫" -> {
                                             if (editingValue.isNotEmpty()) {
                                                 val newValue = editingValue.dropLast(1)
-                                                updateSelectedSegment(if (newValue.isEmpty()) "0" else newValue)
+                                                updateSelectedSegment(newValue.ifEmpty { "0" })
                                             }
                                         }
                                         "Reset" -> {
@@ -862,7 +862,7 @@ private fun InteractiveKeypadButton(
 ) {
     val isSpecial = label in listOf("Reset", "⌫")
     
-    androidx.compose.material3.Button(
+    Button(
         onClick = onClick,
         modifier = modifier.height(48.dp),
         colors = ButtonDefaults.buttonColors(
@@ -984,7 +984,7 @@ private fun SyncTab(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.Button(onClick = {
+                    Button(onClick = {
                         if (customServer.isNotBlank()) {
                             viewModel.addCustomServer(customServer)
                             customServer = ""
@@ -1451,7 +1451,7 @@ private fun appendDigits(current: String, input: String): String {
 }
 
 private fun backspaceDigits(current: String): String {
-    val updated = ("0" + current).dropLast(1)
+    val updated = "0$current".dropLast(1)
     return updated.padStart(9, '0')
 }
 

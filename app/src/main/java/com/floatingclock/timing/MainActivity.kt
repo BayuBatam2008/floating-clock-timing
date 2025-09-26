@@ -17,18 +17,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,8 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -54,7 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -196,12 +189,7 @@ class MainActivity : ComponentActivity() {
         // Monitor events and schedule notifications efficiently with debouncing
         lifecycleScope.launch {
             // Combine both states untuk get complete event info
-            kotlinx.coroutines.flow.combine(
-                viewModel.overlayState,
-                viewModel.userPreferences
-            ) { overlayState, userPrefs ->
-                Pair(overlayState, userPrefs)
-            }.collect { (overlayState, userPrefs) ->
+            viewModel.overlayState.collect { overlayState ->
                 val newEventTime = overlayState.eventTimeMillis
                 
                 // Skip if same event already scheduled (avoid spam)
@@ -346,9 +334,6 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
             } else {
                 System.currentTimeMillis()
             }
-            
-            val instant = java.time.Instant.ofEpochMilli(now)
-            val zoned = instant.atZone(java.time.ZoneId.systemDefault())
             
             // Update time display using optimized background formatting
             MainThreadOptimizer.executeOffMainThread(

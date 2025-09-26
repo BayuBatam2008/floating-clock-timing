@@ -44,10 +44,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val overlayState: StateFlow<FloatingOverlayUiState> = floatingClockController.overlayState
         .stateIn(viewModelScope, SharingStarted.Eagerly, floatingClockController.overlayState.value)
 
-    fun showOverlay() {
-        floatingClockController.showOverlay(getApplication())
-    }
-
     fun hideOverlay() {
         floatingClockController.hideOverlay(getApplication())
     }

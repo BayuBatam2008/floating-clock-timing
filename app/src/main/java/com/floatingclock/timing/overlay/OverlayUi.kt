@@ -67,7 +67,7 @@ fun FloatingOverlaySurface(
         initialValue = 0.4f,
         targetValue = if (state.pulsingStartedAtMillis != null) 1f else 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = style.pulsingSpeedMs.toInt(), easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = style.pulsingSpeedMs, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulseFraction"
