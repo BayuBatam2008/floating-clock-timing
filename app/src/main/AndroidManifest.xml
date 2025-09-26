@@ -37,14 +37,7 @@
             android:exported="false"
             android:stopWithTask="false" />
             
-        <service
-            android:name=".notification.EventReminderService"
-            android:exported="false"
-            android:enabled="true" />
-            
-        <receiver
-            android:name=".notification.NotificationDismissReceiver"
-            android:exported="false" />
+
             
         <receiver
             android:name=".notification.EventAlarmReceiver"

@@ -165,7 +165,7 @@ class EfficientNotificationManager(private val context: Context) {
         )
         
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(fullMessage)
             .setStyle(NotificationCompat.BigTextStyle().bigText(fullMessage))

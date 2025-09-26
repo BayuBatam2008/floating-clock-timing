@@ -1585,7 +1585,11 @@ private fun LivePreviewClock(
                     }
                 }
                 Line2DisplayMode.BOTH -> {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
                             text = currentDate,
                             style = MaterialTheme.typography.bodyLarge.copy(
@@ -1597,13 +1601,13 @@ private fun LivePreviewClock(
                         )
                         targetTime?.let { target ->
                             Text(
-                                text = "• $target",
+                                text = target,
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
                                     fontWeight = FontWeight.Medium
                                 ),
                                 color = secondaryAccentColor,
-                                textAlign = TextAlign.Start
+                                textAlign = TextAlign.End
                             )
                         }
                     }
