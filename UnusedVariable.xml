@@ -1,0 +1,67 @@
+<problems>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/MainActivity.kt</file>
+  <line>204</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.MainActivity void setupEfficientEventNotifications()" />
+  <problem_class id="UnusedVariable" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused variable</problem_class>
+  <description>Unused variable</description>
+  <highlighted_element>userPrefs</highlighted_element>
+  <language>kotlin</language>
+  <offset>39</offset>
+  <length>9</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/MainActivity.kt</file>
+  <line>351</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.MainActivityKt void PictureInPictureFloatingClock(com.floatingclock.timing.MainViewModel viewModel)" />
+  <problem_class id="UnusedVariable" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused variable</problem_class>
+  <description>Unused variable</description>
+  <highlighted_element>zoned</highlighted_element>
+  <language>kotlin</language>
+  <offset>16</offset>
+  <length>5</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/notification/EfficientNotificationManager.kt</file>
+  <line>231</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.notification</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.notification.EventAlarmReceiver void onReceive(android.content.Context context, android.content.Intent intent)" />
+  <problem_class id="UnusedVariable" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused variable</problem_class>
+  <description>Unused variable</description>
+  <highlighted_element>scheduledAt</highlighted_element>
+  <language>kotlin</language>
+  <offset>12</offset>
+  <length>11</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/events/EventEditModal.kt</file>
+  <line>36</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui.events</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.ui.events.EventEditModalKt void EventEditModal(com.floatingclock.timing.ui.events.EventViewModel eventViewModel, kotlin.jvm.functions.Function0&lt;kotlin.Unit&gt; onDismiss)" />
+  <problem_class id="UnusedVariable" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused variable</problem_class>
+  <description>Unused variable</description>
+  <highlighted_element>scope</highlighted_element>
+  <language>kotlin</language>
+  <offset>8</offset>
+  <length>5</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/theme/Theme.kt</file>
+  <line>28</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui.theme</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.ui.theme.ThemeKt void FloatingClockTheme(boolean darkTheme, boolean dynamicColor, androidx.compose.runtime.internal.ComposableFunction0&lt;kotlin.Unit&gt; content)" />
+  <problem_class id="UnusedVariable" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Unused variable</problem_class>
+  <description>Unused variable</description>
+  <highlighted_element>activity</highlighted_element>
+  <language>kotlin</language>
+  <offset>16</offset>
+  <length>8</length>
+</problem>
+</problems>

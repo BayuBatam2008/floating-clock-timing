@@ -1,0 +1,30 @@
+<problems>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/data/AppDependencies.kt</file>
+  <line>13</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.data</package>
+  <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/data/AppDependencies.kt" />
+  <problem_class id="AndroidLintStaticFieldLeak" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Static Field Leaks</problem_class>
+  <hints />
+  <description>&lt;html&gt;Do not place Android context classes in static fields (static reference to &lt;code&gt;PreferencesRepository&lt;/code&gt; which has field &lt;code&gt;context&lt;/code&gt; pointing to &lt;code&gt;Context&lt;/code&gt;); this is a memory leak&lt;/html&gt;</description>
+  <highlighted_element>lateinit var preferencesRepository: PreferencesRepository private set</highlighted_element>
+  <language>kotlin</language>
+  <offset>4</offset>
+  <length>77</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/overlay/FloatingClockService.kt</file>
+  <line>91</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.overlay</package>
+  <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/overlay/FloatingClockService.kt" />
+  <problem_class id="AndroidLintStaticFieldLeak" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Static Field Leaks</problem_class>
+  <hints />
+  <description>&lt;html&gt;Do not place Android context classes in static fields (static reference to &lt;code&gt;FloatingClockService&lt;/code&gt; which has field &lt;code&gt;overlayView&lt;/code&gt; pointing to &lt;code&gt;ViewGroup&lt;/code&gt;); this is a memory leak&lt;/html&gt;</description>
+  <highlighted_element>private var serviceInstance: FloatingClockService? = null</highlighted_element>
+  <language>kotlin</language>
+  <offset>8</offset>
+  <length>57</length>
+</problem>
+</problems>

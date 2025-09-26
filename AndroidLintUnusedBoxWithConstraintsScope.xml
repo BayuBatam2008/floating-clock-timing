@@ -1,0 +1,30 @@
+<problems>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt</file>
+  <line>1318</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui</package>
+  <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt" />
+  <problem_class id="AndroidLintUnusedBoxWithConstraintsScope" severity="ERROR" attribute_key="ERRORS_ATTRIBUTES">BoxWithConstraints content should use the constraints provided via BoxWithConstraintsScope</problem_class>
+  <hints />
+  <description>&lt;html&gt;BoxWithConstraints scope is not used&lt;/html&gt;</description>
+  <highlighted_element>{ val density = LocalDensity.current val indicatorWidth = 64.dp val indicato...</highlighted_element>
+  <language>kotlin</language>
+  <offset>6</offset>
+  <length>1561</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt</file>
+  <line>1389</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui</package>
+  <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt" />
+  <problem_class id="AndroidLintUnusedBoxWithConstraintsScope" severity="ERROR" attribute_key="ERRORS_ATTRIBUTES">BoxWithConstraints content should use the constraints provided via BoxWithConstraintsScope</problem_class>
+  <hints />
+  <description>&lt;html&gt;BoxWithConstraints scope is not used&lt;/html&gt;</description>
+  <highlighted_element>{ val density = LocalDensity.current val indicatorWidth = 64.dp val indicato...</highlighted_element>
+  <language>kotlin</language>
+  <offset>6</offset>
+  <length>1810</length>
+</problem>
+</problems>

@@ -1,0 +1,30 @@
+<problems>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/MainActivity.kt</file>
+  <line>147</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing</package>
+  <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/MainActivity.kt" />
+  <problem_class id="AndroidLintUseKtx" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Use KTX extension function</problem_class>
+  <hints />
+  <description>&lt;html&gt;Use the KTX extension function &lt;code&gt;String.toUri&lt;/code&gt; instead?&lt;/html&gt;</description>
+  <highlighted_element>Uri.parse(&quot;package:$packageName&quot;)</highlighted_element>
+  <language>kotlin</language>
+  <offset>32</offset>
+  <length>33</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/data/EventRepository.kt</file>
+  <line>117</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.data</package>
+  <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/data/EventRepository.kt" />
+  <problem_class id="AndroidLintUseKtx" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Use KTX extension function</problem_class>
+  <hints />
+  <description>&lt;html&gt;Use the KTX extension function &lt;code&gt;SharedPreferences.edit&lt;/code&gt; instead?&lt;/html&gt;</description>
+  <highlighted_element>sharedPreferences.edit()</highlighted_element>
+  <language>kotlin</language>
+  <offset>12</offset>
+  <length>24</length>
+</problem>
+</problems>

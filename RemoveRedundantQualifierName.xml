@@ -1,0 +1,80 @@
+<problems>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/overlay/FloatingClockController.kt</file>
+  <line>37</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.overlay</package>
+  <entry_point TYPE="field" FQNAME="com.floatingclock.timing.overlay.FloatingClockController eventEndTimer" />
+  <problem_class id="RemoveRedundantQualifierName" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Redundant qualifier name</problem_class>
+  <description>Remove redundant qualifier name</description>
+  <highlighted_element>kotlinx.coroutines</highlighted_element>
+  <language>kotlin</language>
+  <offset>31</offset>
+  <length>18</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt</file>
+  <line>865</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.ui.FloatingClockAppKt void InteractiveKeypadButton(androidx.compose.ui.Modifier modifier, java.lang.String label, kotlin.jvm.functions.Function0&lt;kotlin.Unit&gt; onClick)" />
+  <problem_class id="RemoveRedundantQualifierName" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Redundant qualifier name</problem_class>
+  <description>Remove redundant qualifier name</description>
+  <highlighted_element>androidx.compose.material3</highlighted_element>
+  <language>kotlin</language>
+  <offset>4</offset>
+  <length>26</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt</file>
+  <line>987</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.ui.FloatingClockAppKt void SyncTab(androidx.compose.ui.Modifier modifier, com.floatingclock.timing.MainViewModel viewModel, com.floatingclock.timing.data.TimeSyncState timeState, com.floatingclock.timing.data.model.UserPreferences userPreferences)" />
+  <problem_class id="RemoveRedundantQualifierName" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Redundant qualifier name</problem_class>
+  <description>Remove redundant qualifier name</description>
+  <highlighted_element>androidx.compose.material3</highlighted_element>
+  <language>kotlin</language>
+  <offset>20</offset>
+  <length>26</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt</file>
+  <line>1559</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.ui.FloatingClockAppKt void LivePreviewClock(com.floatingclock.timing.MainViewModel viewModel, long currentMillis)" />
+  <problem_class id="RemoveRedundantQualifierName" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Redundant qualifier name</problem_class>
+  <description>Remove redundant qualifier name</description>
+  <highlighted_element>androidx.compose.foundation.layout</highlighted_element>
+  <language>kotlin</language>
+  <offset>16</offset>
+  <length>34</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/FloatingClockApp.kt</file>
+  <line>1568</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.ui.FloatingClockAppKt void LivePreviewClock(com.floatingclock.timing.MainViewModel viewModel, long currentMillis)" />
+  <problem_class id="RemoveRedundantQualifierName" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Redundant qualifier name</problem_class>
+  <description>Remove redundant qualifier name</description>
+  <highlighted_element>androidx.compose.ui.graphics</highlighted_element>
+  <language>kotlin</language>
+  <offset>32</offset>
+  <length>28</length>
+</problem>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/java/com/floatingclock/timing/ui/events/EventsScreen.kt</file>
+  <line>146</line>
+  <module>floating-clock-timing.app.main</module>
+  <package>com.floatingclock.timing.ui.events</package>
+  <entry_point TYPE="method" FQNAME="com.floatingclock.timing.ui.events.EventsScreenKt void EmptyEventsState(kotlin.jvm.functions.Function0&lt;kotlin.Unit&gt; onCreateEvent, androidx.compose.ui.Modifier modifier)" />
+  <problem_class id="RemoveRedundantQualifierName" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Redundant qualifier name</problem_class>
+  <description>Remove redundant qualifier name</description>
+  <highlighted_element>androidx.compose.ui.res</highlighted_element>
+  <language>kotlin</language>
+  <offset>22</offset>
+  <length>23</length>
+</problem>
+</problems>

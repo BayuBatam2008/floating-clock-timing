@@ -1,0 +1,15 @@
+<problems>
+<problem>
+  <file>file://$PROJECT_DIR$/app/src/main/AndroidManifest.xml</file>
+  <line>9</line>
+  <module>floating-clock-timing.app.main</module>
+  <entry_point TYPE="file" FQNAME="file://$PROJECT_DIR$/app/src/main/AndroidManifest.xml" />
+  <problem_class id="AndroidLintExactAlarmPolicy" severity="WARNING" attribute_key="WARNING_ATTRIBUTES">Exact Alarm Insights</problem_class>
+  <hints />
+  <description>&lt;html&gt;&lt;code&gt;USE_EXACT_ALARM&lt;/code&gt; permission is restricted and will be automatically granted to apps with core functions needing precise timing (alarms, calendars). You’ll need to justify the need for this API.&lt;/html&gt;</description>
+  <highlighted_element>android:name=&quot;android.permission.USE_EXACT_ALARM&quot;</highlighted_element>
+  <language>XML</language>
+  <offset>21</offset>
+  <length>49</length>
+</problem>
+</problems>
