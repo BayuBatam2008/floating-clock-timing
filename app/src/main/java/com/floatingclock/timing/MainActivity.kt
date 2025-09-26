@@ -67,6 +67,9 @@ import com.floatingclock.timing.ui.FloatingClockApp
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
 import com.floatingclock.timing.notification.EfficientNotificationManager
 import com.floatingclock.timing.data.PerformanceOptimizations
+import com.floatingclock.timing.utils.DateTimeFormatters
+import com.floatingclock.timing.utils.UIComponents
+import com.floatingclock.timing.data.PerformanceOptimizations.MainThreadOptimizer
 
 
 // Data class for progress indicator information
@@ -163,6 +166,12 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val params = PictureInPictureParams.Builder()
                 .setAspectRatio(Rational(23, 10)) // 2.3 aspect ratio - safely within valid range
+                .apply {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        setAutoEnterEnabled(true)
+                        setSourceRectHint(android.graphics.Rect(0, 0, 100, 100))
+                    }
+                }
                 .build()
             enterPictureInPictureMode(params)
         } else {
@@ -208,7 +217,7 @@ class MainActivity : ComponentActivity() {
                     val fiveMinutesInMillis = 5 * 60 * 1000L
                     val timeUntilEvent = newEventTime - now
                     
-                    android.util.Log.i("EfficientNotif", "📅 Real event detected: $eventName at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date(newEventTime))}")
+                    android.util.Log.i("EfficientNotif", "📅 Real event detected: $eventName at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(newEventTime))}")
                     android.util.Log.i("EfficientNotif", "   ⏳ Time until event: ${timeUntilEvent / 60000} minutes")
                     
                     // Schedule 5-minute reminder HANYA jika event masih lebih dari 5 menit
@@ -307,15 +316,7 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     val userPreferences by viewModel.userPreferences.collectAsState()
     val scheduledEventTime = overlayState.eventTimeMillis
     
-    // Create dynamic time formatter based on user preferences
-    val timeFormatter = remember(userPreferences.floatingClockStyle.showMillis) {
-        if (userPreferences.floatingClockStyle.showMillis) {
-            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-        } else {
-            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
-        }
-    }
-    val dateFormatter = remember { java.time.format.DateTimeFormatter.ofPattern("EEE, dd MMM yyyy") }
+    // Use centralized formatters for consistency
     
     // Performance monitoring
     PerformanceOptimizations.PerformanceMonitor("PiPClock") { frameRate, memoryMb ->
@@ -349,9 +350,19 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
             val instant = java.time.Instant.ofEpochMilli(now)
             val zoned = instant.atZone(java.time.ZoneId.systemDefault())
             
-            // Update time display
-            currentTime = timeFormatter.format(zoned)
-            currentDate = dateFormatter.format(zoned)
+            // Update time display using optimized background formatting
+            MainThreadOptimizer.executeOffMainThread(
+                operation = {
+                    Pair(
+                        DateTimeFormatters.formatTime(now, showSeconds = true, showMillis = userPreferences.floatingClockStyle.showMillis),
+                        DateTimeFormatters.formatDate(now)
+                    )
+                },
+                onResult = { (timeText: String, dateText: String) ->
+                    currentTime = timeText
+                    currentDate = dateText
+                }
+            )
             
             // Update progress and pulsing if scheduled event exists
             if (scheduledEventTime != null) {
@@ -398,13 +409,10 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
         }
     }
     
-    // Format target time if scheduled event exists
+    // Format target time if scheduled event exists using centralized formatter
     val targetTime = remember(scheduledEventTime) {
-        scheduledEventTime?.let { eventMillis: Long ->
-            val instant = java.time.Instant.ofEpochMilli(eventMillis)
-            val zoned = instant.atZone(java.time.ZoneId.systemDefault())
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-            formatter.format(zoned)
+        scheduledEventTime?.let { eventMillis ->
+            DateTimeFormatters.formatTargetTime(eventMillis)
         }
     }
     
@@ -444,80 +452,20 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Start // Left align the entire column
         ) {
-            // Line 1: Time - large font, main theme color, left aligned
-            Text(
+            // Line 1: Time - using centralized UI component
+            UIComponents.TimeText(
                 text = currentTime,
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontSize = 24.sp, // Large font size
-                    fontWeight = FontWeight.Bold
-                ),
-                color = primaryColor, // Main theme color
-                textAlign = TextAlign.Start // Left aligned
+                color = primaryColor
             )
             
-            // Line 2: Display based on user preference
-            val displayMode = userPreferences.floatingClockStyle.getLine2DisplayMode()
-            when (displayMode) {
-                com.floatingclock.timing.data.model.Line2DisplayMode.DATE_ONLY -> {
-                    Text(
-                        text = currentDate,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = passiveColor,
-                        textAlign = TextAlign.Start
-                    )
-                }
-                com.floatingclock.timing.data.model.Line2DisplayMode.TARGET_TIME_ONLY -> {
-                    targetTime?.let { target ->
-                        Text(
-                            text = target,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = if (progressInfo.isActive) primaryColor else passiveColor,
-                            textAlign = TextAlign.Start
-                        )
-                    }
-                }
-                com.floatingclock.timing.data.model.Line2DisplayMode.BOTH -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Left: Date (tanggal left aligned)
-                        Text(
-                            text = currentDate,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = passiveColor,
-                            textAlign = TextAlign.Start,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        // Right: Target Time (target time right aligned dengan space di tengah)
-                        targetTime?.let { target ->
-                            Text(
-                                text = target,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                color = if (progressInfo.isActive) primaryColor else passiveColor,
-                                textAlign = TextAlign.End,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                        }
-                    }
-                }
-                com.floatingclock.timing.data.model.Line2DisplayMode.NONE -> {
-                    // Don't show anything for line 2
-                }
-            }
+            // Line 2: Display based on user preference - using centralized UI component
+            UIComponents.Line2Content(
+                displayMode = userPreferences.floatingClockStyle.getLine2DisplayMode(),
+                currentDate = currentDate,
+                targetTime = targetTime,
+                dateColor = passiveColor,
+                targetColor = if (progressInfo.isActive) primaryColor else passiveColor
+            )
             
             // Add padding between line 2 and line 3
             if (scheduledEventTime != null) {

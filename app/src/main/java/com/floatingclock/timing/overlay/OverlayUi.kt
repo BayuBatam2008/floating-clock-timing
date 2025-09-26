@@ -45,6 +45,8 @@ import kotlinx.coroutines.delay
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.data.model.Line2DisplayMode
 import com.floatingclock.timing.data.PerformanceOptimizations
+import com.floatingclock.timing.utils.DateTimeFormatters
+import com.floatingclock.timing.utils.UIComponents
 
 @Composable
 fun FloatingOverlaySurface(
@@ -114,19 +116,16 @@ fun FloatingOverlaySurface(
     
     val displayTimeMillis = if (style.showMillis) smoothCurrentMillis else state.currentTimeMillis
 
+    // Use centralized formatters for consistency
     val timeText = remember(displayTimeMillis, style.showMillis) {
-        formatTime(displayTimeMillis, false, style.showMillis)
+        DateTimeFormatters.formatTime(displayTimeMillis, showSeconds = true, showMillis = style.showMillis)
     }
     val currentDate = remember(displayTimeMillis) {
-        formatDate(displayTimeMillis)
+        DateTimeFormatters.formatDate(displayTimeMillis)
     }
-    // Format target time sama seperti di MainActivity untuk consistency
     val targetTime = remember(state.eventTimeMillis) {
         state.eventTimeMillis?.let { eventMillis ->
-            val instant = java.time.Instant.ofEpochMilli(eventMillis)
-            val zoned = instant.atZone(java.time.ZoneId.systemDefault())
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-            formatter.format(zoned)
+            DateTimeFormatters.formatTargetTime(eventMillis)
         }
     }
 
@@ -245,25 +244,6 @@ fun FloatingOverlaySurface(
     }
 }
 
-private val timeFormatterSeconds: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
-private val timeFormatterMinutes: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val timeFormatterMillis: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy")
-
-private fun formatTime(epochMillis: Long, showSeconds: Boolean, showMillis: Boolean): String {
-    val instant = Instant.ofEpochMilli(epochMillis)
-    val zoned = instant.atZone(ZoneId.systemDefault())
-    return when {
-        showMillis -> timeFormatterMillis.format(zoned)
-        showSeconds -> timeFormatterSeconds.format(zoned)
-        else -> timeFormatterMinutes.format(zoned)
-    }
-}
-
-private fun formatDate(epochMillis: Long): String {
-    val instant = Instant.ofEpochMilli(epochMillis)
-    val zoned = instant.atZone(ZoneId.systemDefault())
-    return dateFormatter.format(zoned)
-}
+// Formatters removed - now using centralized DateTimeFormatters utility
 
 

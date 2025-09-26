@@ -10,14 +10,31 @@ import kotlin.math.abs
 object PerformanceOptimizations {
     
     /**
-     * Throttled updater for reducing excessive updates
+     * Throttled updater for reducing excessive updates - optimized for main thread
      */
     class ThrottledUpdater(private val intervalMs: Long = 16L) {
         private var lastUpdateTime = 0L
         
         fun shouldUpdate(): Boolean {
-            val currentTime = System.currentTimeMillis()
+            val currentTime = System.nanoTime() / 1_000_000L // Use nanoTime for better precision
             return if (currentTime - lastUpdateTime >= intervalMs) {
+                lastUpdateTime = currentTime
+                true
+            } else {
+                false
+            }
+        }
+        
+        // Adaptive throttling based on performance
+        fun shouldUpdateAdaptive(frameDrops: Int = 0): Boolean {
+            val adaptiveInterval = when {
+                frameDrops > 10 -> intervalMs * 2 // Slow down if dropping frames
+                frameDrops > 5 -> intervalMs + (intervalMs / 2)
+                else -> intervalMs
+            }
+            
+            val currentTime = System.nanoTime() / 1_000_000L
+            return if (currentTime - lastUpdateTime >= adaptiveInterval) {
                 lastUpdateTime = currentTime
                 true
             } else {
@@ -129,6 +146,33 @@ object PerformanceOptimizations {
                 val memoryMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024f * 1024f)
                 onMetrics(frameRate, memoryMb)
             }
+        }
+    }
+    
+    /**
+     * Main thread work optimizer - moves heavy operations off main thread
+     */
+    object MainThreadOptimizer {
+        private val backgroundScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        
+        fun <T> executeOffMainThread(
+            operation: suspend () -> T,
+            onResult: (T) -> Unit
+        ) {
+            backgroundScope.launch {
+                try {
+                    val result = operation()
+                    launch(Dispatchers.Main) {
+                        onResult(result)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("MainThreadOptimizer", "Background operation failed", e)
+                }
+            }
+        }
+        
+        fun cleanup() {
+            backgroundScope.cancel()
         }
     }
 }

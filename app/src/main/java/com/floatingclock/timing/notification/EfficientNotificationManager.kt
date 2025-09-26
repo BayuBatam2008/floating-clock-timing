@@ -235,8 +235,8 @@ class EventAlarmReceiver : BroadcastReceiver() {
         
         android.util.Log.i("EventAlarmReceiver", "⏰ 5-MINUTE REMINDER ALARM TRIGGERED!")
         android.util.Log.i("EventAlarmReceiver", "   📝 Event: $eventName")
-        android.util.Log.i("EventAlarmReceiver", "   🎯 Event Time: ${java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date(eventTime))}")
-        android.util.Log.i("EventAlarmReceiver", "   🔔 Notification Time: ${java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date(notificationTime))}")
+        android.util.Log.i("EventAlarmReceiver", "   🎯 Event Time: ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(eventTime))}")
+        android.util.Log.i("EventAlarmReceiver", "   🔔 Notification Time: ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(notificationTime))}")
         android.util.Log.i("EventAlarmReceiver", "   ⏳ Minutes until event: $minutesUntilEvent")
         android.util.Log.i("EventAlarmReceiver", "   ⚡ Notification delay: ${actualDelay}ms")
         

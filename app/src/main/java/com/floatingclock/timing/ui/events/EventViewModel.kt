@@ -35,7 +35,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         // Round to next minute, then add 5 minutes
         val roundedToNextMinute = now.withSecond(0).withNano(0).plusMinutes(1)
         val defaultTime = roundedToNextMinute.plusMinutes(5)
-        return String.format("%02d%02d%02d%03d", 
+        return String.format(java.util.Locale.US, "%02d%02d%02d%03d", 
             defaultTime.hour, defaultTime.minute, 0, 0) // Always use 00.000 for seconds and millis
     }
     
@@ -74,7 +74,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         // Convert time format from HH:mm:ss.SSS to input format
         try {
             val time = LocalTime.parse(event.targetTime, DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
-            val formattedTime = String.format("%02d%02d%02d%03d", 
+            val formattedTime = String.format(java.util.Locale.US, "%02d%02d%02d%03d", 
                 time.hour, time.minute, time.second, time.nano / 1000000)
             _currentTimeInput.value = formattedTime
         } catch (e: Exception) {
@@ -100,7 +100,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         val now = LocalTime.now()
         val roundedToNextMinute = now.withSecond(0).withNano(0).plusMinutes(1)
         val defaultTime = roundedToNextMinute.plusMinutes(5)
-        val formattedTime = String.format("%02d%02d%02d%03d", 
+        val formattedTime = String.format(java.util.Locale.US, "%02d%02d%02d%03d", 
             defaultTime.hour, defaultTime.minute, 0, 0)
         _currentTimeInput.value = formattedTime
     }
@@ -138,7 +138,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         val newSecond = second ?: currentSecond
         val newMillisecond = millisecond ?: currentMillisecond
         
-        val newValue = String.format("%02d%02d%02d%03d", newHour, newMinute, newSecond, newMillisecond)
+        val newValue = String.format(java.util.Locale.US, "%02d%02d%02d%03d", newHour, newMinute, newSecond, newMillisecond)
         _currentTimeInput.value = newValue
     }
     
@@ -153,7 +153,7 @@ class EventViewModel(private val eventRepository: EventRepository) : ViewModel()
         val second = input.substring(4, 6).toIntOrNull() ?: 0
         val millisecond = input.substring(6, 9).toIntOrNull() ?: 0
         
-        return String.format("%02d:%02d:%02d.%03d", hour, minute, second, millisecond)
+        return String.format(java.util.Locale.US, "%02d:%02d:%02d.%03d", hour, minute, second, millisecond)
     }
     
     fun saveEvent(onResult: ((Boolean) -> Unit)? = null) {

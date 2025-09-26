@@ -10,10 +10,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,21 +32,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
@@ -133,8 +131,11 @@ import com.floatingclock.timing.data.TimeSyncState
 import com.floatingclock.timing.data.model.FloatingClockStyle
 import com.floatingclock.timing.data.model.UserPreferences
 import com.floatingclock.timing.data.model.Line2DisplayMode
+import com.floatingclock.timing.data.PerformanceOptimizations.MainThreadOptimizer
 import com.floatingclock.timing.overlay.FloatingOverlaySurface
 import com.floatingclock.timing.overlay.FloatingOverlayUiState
+import com.floatingclock.timing.utils.DateTimeFormatters
+import com.floatingclock.timing.utils.UIComponents
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -514,11 +515,9 @@ private fun SyncedTimeCard(
     currentInstant: Instant,
     timeState: TimeSyncState
 ) {
-    val formatter = remember { DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss.SSS") }
-    
     // Optimize formatting to prevent excessive recomposition
     val formattedTime = remember(currentInstant.epochSecond, currentInstant.toEpochMilli() / 10) { 
-        formatter.format(currentInstant.atZone(ZoneId.systemDefault())) 
+        DateTimeFormatters.formatFullSyncTime(currentInstant.toEpochMilli())
     }
     
     Card(
@@ -716,7 +715,7 @@ private fun KeypadButton(
             contentAlignment = Alignment.Center
         ) {
             if (label == "<") {
-                Icon(imageVector = Icons.Default.Backspace, contentDescription = null)
+                Icon(imageVector = Icons.AutoMirrored.Filled.Backspace, contentDescription = null)
             } else {
                 Text(
                     text = label,
@@ -896,7 +895,7 @@ private fun SyncTab(
     timeState: TimeSyncState,
     userPreferences: UserPreferences
 ) {
-    val syncFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss") }
+    // Remove local formatter, use centralized utility
     var customServer by rememberSaveable { mutableStateOf("") }
     var sliderValue by remember(userPreferences.syncIntervalMinutes) {
         mutableFloatStateOf(userPreferences.syncIntervalMinutes.toFloat())
@@ -917,7 +916,7 @@ private fun SyncTab(
                 )
                 Text(
                     text = timeState.lastSyncInstant?.let {
-                        stringResource(id = R.string.last_synced, syncFormatter.format(it.atZone(ZoneId.systemDefault())))
+                        stringResource(id = R.string.last_synced, DateTimeFormatters.formatSyncTime(it.toEpochMilli()))
                     } ?: stringResource(id = R.string.waiting_for_sync),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary
@@ -1096,7 +1095,7 @@ private fun CustomizationTab(
                     valueRange = 0.6f..1.6f,
                     steps = 9, // Creates steps at 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
                     label = { value -> 
-                        "${String.format("%.1f", value)}x"
+                        "${String.format(java.util.Locale.US, "%.1f", value)}x"
                     }
                 )
                 
@@ -1410,8 +1409,8 @@ private fun ValueIndicatorSlider(
             Text(
                 text = when {
                     label(value).isNotEmpty() -> label(value)
-                    value >= 1f -> String.format("%.1f", value)
-                    else -> String.format("%.2f", value)
+                    value >= 1f -> String.format(java.util.Locale.US, "%.1f", value)
+                    else -> String.format(java.util.Locale.US, "%.2f", value)
                 },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 style = MaterialTheme.typography.labelLarge,
@@ -1478,32 +1477,23 @@ private fun LivePreviewClock(
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
     val scheduledEventTime = overlayState.eventTimeMillis
     
-    // Create dynamic time formatter based on user preferences
+    // Use centralized time formatting utilities
     val currentTime = remember(currentMillis, userPreferences.floatingClockStyle.showMillis) {
-        val instant = java.time.Instant.ofEpochMilli(currentMillis)
-        val zoned = instant.atZone(java.time.ZoneId.systemDefault())
-        val formatter = if (userPreferences.floatingClockStyle.showMillis) {
-            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-        } else {
-            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
-        }
-        formatter.format(zoned)
+        DateTimeFormatters.formatTime(
+            currentMillis, 
+            showSeconds = true, 
+            showMillis = userPreferences.floatingClockStyle.showMillis
+        )
     }
     
     val currentDate = remember(currentMillis) {
-        val instant = java.time.Instant.ofEpochMilli(currentMillis)
-        val zoned = instant.atZone(java.time.ZoneId.systemDefault())
-        val formatter = java.time.format.DateTimeFormatter.ofPattern("EEE, dd MMM yyyy")
-        formatter.format(zoned)
+        DateTimeFormatters.formatDate(currentMillis)
     }
     
     // Format target time with milliseconds if scheduled event exists
     val targetTime = remember(scheduledEventTime) {
-        scheduledEventTime?.let { eventMillis: Long ->
-            val instant = java.time.Instant.ofEpochMilli(eventMillis)
-            val zoned = instant.atZone(java.time.ZoneId.systemDefault())
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
-            formatter.format(zoned)
+        scheduledEventTime?.let { eventMillis ->
+            DateTimeFormatters.formatTargetTime(eventMillis)
         }
     }
     
@@ -1547,75 +1537,22 @@ private fun LivePreviewClock(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Start
         ) {
-            // Line 1: Time - large font, main theme color, left aligned
-            Text(
+            // Line 1: Time - using centralized UI component
+            UIComponents.TimeText(
                 text = currentTime,
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontSize = (24.sp * userPreferences.floatingClockStyle.fontScale),
-                    fontWeight = FontWeight.Bold
-                ),
                 color = primaryColor,
-                textAlign = TextAlign.Start
+                fontScale = userPreferences.floatingClockStyle.fontScale
             )
             
-            // Line 2: Based on display mode selection
-            when (userPreferences.floatingClockStyle.getLine2DisplayMode()) {
-                Line2DisplayMode.DATE_ONLY -> {
-                    Text(
-                        text = currentDate,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = secondaryAccentColor,
-                        textAlign = TextAlign.Start
-                    )
-                }
-                Line2DisplayMode.TARGET_TIME_ONLY -> {
-                    targetTime?.let { target ->
-                        Text(
-                            text = target,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = secondaryAccentColor,
-                            textAlign = TextAlign.Start
-                        )
-                    }
-                }
-                Line2DisplayMode.BOTH -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = currentDate,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = secondaryAccentColor,
-                            textAlign = TextAlign.Start
-                        )
-                        targetTime?.let { target ->
-                            Text(
-                                text = target,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = (14.sp * userPreferences.floatingClockStyle.fontScale),
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                color = secondaryAccentColor,
-                                textAlign = TextAlign.End
-                            )
-                        }
-                    }
-                }
-                Line2DisplayMode.NONE -> {
-                    // Show nothing for line 2
-                }
-            }
+            // Line 2: Based on display mode selection - using centralized UI component
+            UIComponents.Line2Content(
+                displayMode = userPreferences.floatingClockStyle.getLine2DisplayMode(),
+                currentDate = currentDate,
+                targetTime = targetTime,
+                dateColor = secondaryAccentColor,
+                targetColor = secondaryAccentColor,
+                fontScale = userPreferences.floatingClockStyle.fontScale
+            )
             
             // Line 3: Progress Indicator (if target time is set)
             targetTime?.let {
@@ -1650,7 +1587,7 @@ private fun durationToDigits(durationMillis: Long): String {
     val seconds = (remaining / TimeUnit.SECONDS.toMillis(1)).toInt().coerceAtMost(59)
     remaining -= TimeUnit.SECONDS.toMillis(seconds.toLong())
     val millis = remaining.toInt().coerceAtMost(999)
-    return String.format("%02d%02d%02d%03d", hours, minutes, seconds, millis)
+    return String.format(java.util.Locale.US, "%02d%02d%02d%03d", hours, minutes, seconds, millis)
 }
 
 private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
