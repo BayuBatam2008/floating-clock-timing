@@ -5,6 +5,7 @@ import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -15,6 +16,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
@@ -47,8 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -80,6 +82,19 @@ class MainActivity : ComponentActivity() {
     
     // Efficient notification manager - JAUH LEBIH HEMAT RESOURCE!
     private lateinit var efficientNotificationManager: EfficientNotificationManager
+    
+    // Activity Result Launcher for permissions
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            android.util.Log.d("MainActivity", "✅ POST_NOTIFICATIONS permission granted!")
+            android.util.Log.d("MainActivity", "🎯 5-minute reminder system ready!")
+        } else {
+            android.util.Log.w("MainActivity", "❌ POST_NOTIFICATIONS permission denied")
+            android.util.Log.w("MainActivity", "⚠️ Reminders may not work properly")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,8 +163,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         // Update PiP state immediately when mode changes
         android.util.Log.d("MainActivity", "PiP mode changed to: $isInPictureInPictureMode")
         isPiPModeState.value = isInPictureInPictureMode
@@ -242,7 +257,7 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 android.util.Log.d("MainActivity", "Requesting POST_NOTIFICATIONS permission")
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
                 android.util.Log.d("MainActivity", "POST_NOTIFICATIONS already granted")
             }
@@ -254,20 +269,6 @@ class MainActivity : ComponentActivity() {
                 android.util.Log.d("MainActivity", "SCHEDULE_EXACT_ALARM permission not granted")
             } else {
                 android.util.Log.d("MainActivity", "SCHEDULE_EXACT_ALARM already granted")
-            }
-        }
-    }
-    
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        android.util.Log.d("MainActivity", "Permission result: code=$requestCode, results=${grantResults.contentToString()}")
-        
-        if (requestCode == 1001) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                android.util.Log.d("MainActivity", "✅ POST_NOTIFICATIONS permission granted!")
-                android.util.Log.d("MainActivity", "🎯 5-minute reminder system ready!")
-            } else {
-                android.util.Log.e("MainActivity", "❌ POST_NOTIFICATIONS permission denied!")
             }
         }
     }

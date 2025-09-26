@@ -100,6 +100,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val app = extras[AndroidViewModelFactory.APPLICATION_KEY] as? Application
                     ?: throw IllegalStateException("Application is not available in extras")
