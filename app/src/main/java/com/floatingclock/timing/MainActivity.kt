@@ -65,9 +65,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.floatingclock.timing.ui.FloatingClockApp
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
-import com.floatingclock.timing.notification.EventReminderService
 import com.floatingclock.timing.notification.EfficientNotificationManager
-import com.floatingclock.timing.notification.SimpleNotificationTester
 import com.floatingclock.timing.data.PerformanceOptimizations
 
 
@@ -86,17 +84,13 @@ class MainActivity : ComponentActivity() {
     
     // Efficient notification manager - JAUH LEBIH HEMAT RESOURCE!
     private lateinit var efficientNotificationManager: EfficientNotificationManager
-    
-    // Simple notification tester untuk debugging
-    private lateinit var notificationTester: SimpleNotificationTester
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Initialize notification systems
+        // Initialize efficient notification system
         efficientNotificationManager = EfficientNotificationManager(this)
-        notificationTester = SimpleNotificationTester(this)
         
         // FORCE REQUEST ALL PERMISSIONS
         requestAllNotificationPermissions()
@@ -186,9 +180,7 @@ class MainActivity : ComponentActivity() {
      * bukan polling setiap 30 detik seperti sebelumnya.
      */
     private fun setupEfficientEventNotifications() {
-        // Stop old service if running
-        val oldServiceIntent = android.content.Intent(this, EventReminderService::class.java)
-        stopService(oldServiceIntent)
+        // Clean setup - no old services to stop
         
         android.util.Log.d("EfficientNotif", "🎯 Setting up real event notification monitoring...")
         

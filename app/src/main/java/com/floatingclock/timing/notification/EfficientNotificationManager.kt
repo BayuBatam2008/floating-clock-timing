@@ -21,10 +21,10 @@ import com.floatingclock.timing.R
 class EfficientNotificationManager(private val context: Context) {
     
     companion object {
-        const val CHANNEL_ID = "floating_clock_events"
-        const val CHANNEL_NAME = "Event Notifications"
-        const val NOTIFICATION_ID = 1001
-        const val ALARM_REQUEST_CODE = 2002
+        private const val CHANNEL_ID = "floating_clock_5min_reminders"
+        private const val CHANNEL_NAME = "5-Minute Event Reminders"
+        private const val NOTIFICATION_ID = 1001
+        private const val ALARM_REQUEST_CODE = 2002
         
         const val EXTRA_EVENT_NAME = "event_name"
         const val EXTRA_EVENT_TIME = "event_time"

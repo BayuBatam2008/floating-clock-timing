@@ -38,12 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
-import kotlin.math.abs
 import kotlinx.coroutines.delay
 import com.floatingclock.timing.data.AppDependencies
 import com.floatingclock.timing.data.model.Line2DisplayMode
@@ -120,22 +117,16 @@ fun FloatingOverlaySurface(
     val timeText = remember(displayTimeMillis, style.showMillis) {
         formatTime(displayTimeMillis, false, style.showMillis)
     }
-    val dateText = remember(displayTimeMillis) {
+    val currentDate = remember(displayTimeMillis) {
         formatDate(displayTimeMillis)
     }
-    val eventInfo = remember(displayTimeMillis, state.eventTimeMillis) {
+    // Format target time sama seperti di MainActivity untuk consistency
+    val targetTime = remember(state.eventTimeMillis) {
         state.eventTimeMillis?.let { eventMillis ->
-            val diff = eventMillis - displayTimeMillis
-            if (diff > 0) {
-                "Event in ${formatDuration(diff)}"
-            } else {
-                val elapsed = abs(diff)
-                if (elapsed < 10_000L) {
-                    "Event triggered"
-                } else {
-                    "Event completed"
-                }
-            }
+            val instant = java.time.Instant.ofEpochMilli(eventMillis)
+            val zoned = instant.atZone(java.time.ZoneId.systemDefault())
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
+            formatter.format(zoned)
         }
     }
 
@@ -176,7 +167,7 @@ fun FloatingOverlaySurface(
                 when (style.getLine2DisplayMode()) {
                     Line2DisplayMode.DATE_ONLY -> {
                         Text(
-                            text = dateText,
+                            text = currentDate,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
                             ),
@@ -185,11 +176,12 @@ fun FloatingOverlaySurface(
                         )
                     }
                     Line2DisplayMode.TARGET_TIME_ONLY -> {
-                        eventInfo?.let { info ->
+                        targetTime?.let { target ->
                             Text(
-                                text = info,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = MaterialTheme.typography.labelSmall.fontSize * style.fontScale
+                                text = target,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
                                 ),
                                 color = secondaryAccentColor,
                                 textAlign = TextAlign.Center
@@ -202,24 +194,28 @@ fun FloatingOverlaySurface(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Left: Date (tanggal left aligned)
                             Text(
-                                text = dateText,
+                                text = currentDate,
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
                                 ),
                                 color = secondaryAccentColor,
-                                textAlign = TextAlign.Start
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
-                            eventInfo?.let { info ->
+                            // Right: Target Time (target time right aligned dengan space di tengah)
+                            targetTime?.let { target ->
                                 Text(
-                                    text = info,
+                                    text = target,
                                     style = MaterialTheme.typography.bodyLarge.copy(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Medium
                                     ),
                                     color = secondaryAccentColor,
-                                    textAlign = TextAlign.End
+                                    textAlign = TextAlign.End,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                             }
                         }
@@ -270,20 +266,4 @@ private fun formatDate(epochMillis: Long): String {
     return dateFormatter.format(zoned)
 }
 
-private fun formatDuration(millis: Long): String {
-    val duration = Duration.ofMillis(millis)
-    val hours = duration.toHours()
-    val minutes = duration.minusHours(hours).toMinutes()
-    val seconds = duration.minusHours(hours).minusMinutes(minutes).seconds
-    val milliseconds = duration.minusHours(hours).minusMinutes(minutes).minusSeconds(seconds).toMillis()
-    val locale = Locale.getDefault()
-    return buildString {
-        if (hours > 0) {
-            append(hours)
-            append("h ")
-        }
-        append(String.format(locale, "%02d:%02d", minutes, seconds))
-        append('.')
-        append(String.format(locale, "%03d", milliseconds))
-    }
-}
+
