@@ -182,14 +182,14 @@ private fun EmptyEventsState(
 @Composable
 private fun EventCard(
     event: Event,
+    modifier: Modifier = Modifier,
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onToggleEnabled: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onSelect: () -> Unit = {},
-    onLongPress: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onLongPress: () -> Unit = {}
 ) {
     Card(
         modifier = modifier
