@@ -25,61 +25,12 @@ object PerformanceOptimizations {
             }
         }
         
-        // Adaptive throttling based on performance
-        fun shouldUpdateAdaptive(frameDrops: Int = 0): Boolean {
-            val adaptiveInterval = when {
-                frameDrops > 10 -> intervalMs * 2 // Slow down if dropping frames
-                frameDrops > 5 -> intervalMs + (intervalMs / 2)
-                else -> intervalMs
-            }
-            
-            val currentTime = System.nanoTime() / 1_000_000L
-            return if (currentTime - lastUpdateTime >= adaptiveInterval) {
-                lastUpdateTime = currentTime
-                true
-            } else {
-                false
-            }
-        }
+        // shouldUpdateAdaptive function removed as it was unused
     }
     
-    /**
-     * Debounced state for reducing rapid state changes
-     */
-    @Composable
-    fun <T> rememberDebouncedState(
-        value: T,
-        delayMs: Long = 100L
-    ): State<T> {
-        val debouncedValue = remember { mutableStateOf(value) }
-        
-        LaunchedEffect(value) {
-            delay(delayMs)
-            debouncedValue.value = value
-        }
-        
-        return debouncedValue
-    }
+    // rememberDebouncedState function removed as it was unused
     
-    /**
-     * Optimized string formatting with caching
-     */
-    class StringFormatter {
-        private val cache = mutableMapOf<String, String>()
-        private val maxCacheSize = 50
-        
-        fun formatTime(timeMillis: Long, pattern: String): String {
-            val key = "$timeMillis-$pattern"
-            return cache.getOrPut(key) {
-                if (cache.size >= maxCacheSize) {
-                    cache.clear()
-                }
-                java.time.format.DateTimeFormatter.ofPattern(pattern)
-                    .format(java.time.Instant.ofEpochMilli(timeMillis)
-                        .atZone(java.time.ZoneId.systemDefault()))
-            }
-        }
-    }
+    // StringFormatter class removed as it was unused
     
     /**
      * Frame rate optimizer for smooth animations
@@ -116,17 +67,7 @@ object PerformanceOptimizations {
         }
     }
     
-    /**
-     * Memory efficient update checker
-     */
-    fun <T> hasSignificantChange(old: T, new: T, threshold: Float = 0.01f): Boolean {
-        return when {
-            old is Float && new is Float -> abs(old - new) > threshold
-            old is Double && new is Double -> abs(old - new) > threshold
-            old is Long && new is Long -> abs(old - new) > (threshold * 1000).toLong()
-            else -> old != new
-        }
-    }
+    // hasSignificantChange function removed as it was unused
     
     /**
      * Composable for monitoring performance
@@ -171,8 +112,6 @@ object PerformanceOptimizations {
             }
         }
         
-        fun cleanup() {
-            backgroundScope.cancel()
-        }
+        // cleanup function removed as it was unused
     }
 }

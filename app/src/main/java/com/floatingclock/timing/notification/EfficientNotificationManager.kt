@@ -82,22 +82,13 @@ class EfficientNotificationManager(private val context: Context) {
         
         // Schedule exact alarm - 5 MENIT SEBELUM EVENT!
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    notificationTime,
-                    pendingIntent
-                )
-                android.util.Log.i("EfficientNotif", "✅ 5-minute reminder alarm scheduled successfully")
-                android.util.Log.i("EfficientNotif", "   🔔 Will remind in ${timeUntilNotification / 60000} minutes")
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    notificationTime,
-                    pendingIntent
-                )
-                android.util.Log.i("EfficientNotif", "✅ 5-minute reminder alarm scheduled (older Android)")
-            }
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                notificationTime,
+                pendingIntent
+            )
+            android.util.Log.i("EfficientNotif", "✅ 5-minute reminder alarm scheduled successfully")
+            android.util.Log.i("EfficientNotif", "   🔔 Will remind in ${timeUntilNotification / 60000} minutes")
         } catch (e: SecurityException) {
             android.util.Log.w("EfficientNotif", "❌ Exact alarm permission denied, using regular alarm: ${e.message}")
             // Fallback to regular alarm if exact alarm permission denied
@@ -201,20 +192,18 @@ class EfficientNotificationManager(private val context: Context) {
 
     
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "5-minute reminder notifications for floating clock events"
-                enableVibration(true)
-                enableLights(true)
-            }
-            
-            val manager = context.getSystemService(NotificationManager::class.java)
-            manager?.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "5-minute reminder notifications for floating clock events"
+            enableVibration(true)
+            enableLights(true)
         }
+        
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager?.createNotificationChannel(channel)
     }
 }
 

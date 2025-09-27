@@ -214,7 +214,5 @@ class EventRepository(context: Context) {
         }
     }
     
-    suspend fun deleteEventById(eventId: String) = withContext(Dispatchers.IO) {
-        deleteEvent(eventId)
-    }
+    // Function deleteEventById removed as it was unused
 }

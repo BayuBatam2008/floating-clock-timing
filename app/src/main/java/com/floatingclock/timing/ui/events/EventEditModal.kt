@@ -200,7 +200,7 @@ private fun TimeInputScheduleSection(
     modifier: Modifier = Modifier
 ) {
     // State for absolute time input (like alarm clock) - parse from currentTimeInput
-    var selectedSegment by rememberSaveable { mutableStateOf(0) } // 0=hours, 1=minutes, 2=seconds, 3=millis
+    var selectedSegment by rememberSaveable { mutableIntStateOf(0) } // 0=hours, 1=minutes, 2=seconds, 3=millis
     
     // Parse current time input - remove rememberSaveable to avoid conflicts
     val paddedInput = currentTimeInput.padStart(9, '0')

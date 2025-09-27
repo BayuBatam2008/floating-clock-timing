@@ -14,7 +14,6 @@ import com.floatingclock.timing.data.model.FloatingClockStyle
 import com.floatingclock.timing.data.model.UserPreferences
 import com.floatingclock.timing.overlay.FloatingClockController
 import com.floatingclock.timing.overlay.FloatingOverlayUiState
-import java.time.Instant
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn

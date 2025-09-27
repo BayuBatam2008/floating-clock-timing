@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Rational
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,10 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
@@ -171,21 +169,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun enterPictureInPicture() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val params = PictureInPictureParams.Builder()
-                .setAspectRatio(Rational(23, 10)) // 2.3 aspect ratio - safely within valid range
-                .apply {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        setAutoEnterEnabled(true)
-                        setSourceRectHint(android.graphics.Rect(0, 0, 100, 100))
-                    }
+        val params = PictureInPictureParams.Builder()
+            .setAspectRatio(Rational(23, 10)) // 2.3 aspect ratio - safely within valid range
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setAutoEnterEnabled(true)
+                    setSourceRectHint(android.graphics.Rect(0, 0, 100, 100))
                 }
-                .build()
-            enterPictureInPictureMode(params)
-        } else {
-            @Suppress("DEPRECATION")
-            enterPictureInPictureMode()
-        }
+            }
+            .build()
+        enterPictureInPictureMode(params)
     }
     
     // Track last scheduled event to avoid duplicate scheduling
@@ -289,8 +282,8 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     
     // Pulsing animation state
     var isPulsing by remember { mutableStateOf(false) }
-    var pulsingStartTime by remember { mutableStateOf(0L) }
-    var lastTimeDifference by remember { mutableStateOf(Long.MAX_VALUE) }
+    var pulsingStartTime by remember { mutableLongStateOf(0L) }
+    var lastTimeDifference by remember { mutableLongStateOf(Long.MAX_VALUE) }
     
     // Progress state  
     var progressInfo by remember { mutableStateOf(ProgressInfo(0f, false)) }

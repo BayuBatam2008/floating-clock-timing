@@ -31,8 +31,7 @@ class TimeSyncManager(
     private val _state = MutableStateFlow(TimeSyncState())
     val state: StateFlow<TimeSyncState> = _state.asStateFlow()
     
-    private val _activeTargetEvent = MutableStateFlow<Event?>(null)
-    val activeTargetEvent: StateFlow<Event?> = _activeTargetEvent.asStateFlow()
+    // activeTargetEvent property removed as it was unused
 
     private var autoSyncJob: Job? = null
     private var eventMonitoringJob: Job? = null
@@ -164,7 +163,7 @@ class TimeSyncManager(
                     
                     // Update active target event
                     val activeEvent = repository.getActiveTargetEvent()
-                    _activeTargetEvent.value = activeEvent
+                    // activeTargetEvent removed as it was unused
                     
                     // Wait 1 second before next check
                     delay(1000)
@@ -178,7 +177,7 @@ class TimeSyncManager(
     
     fun stopEventMonitoring() {
         eventMonitoringJob?.cancel()
-        _activeTargetEvent.value = null
+        // activeTargetEvent removed as it was unused
     }
 }
 
