@@ -5,9 +5,14 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -641,7 +646,10 @@ private fun InteractiveTimeSegment(
         } else {
             Color.Transparent
         },
-        animationSpec = tween(200),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "background_color"
     )
     
@@ -651,7 +659,10 @@ private fun InteractiveTimeSegment(
         } else {
             MaterialTheme.colorScheme.onSurface
         },
-        animationSpec = tween(200),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "content_color"
     )
 
@@ -661,7 +672,10 @@ private fun InteractiveTimeSegment(
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = tween(200),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "label_color"
     )
 
@@ -1073,12 +1087,12 @@ private fun CustomizationTab(
     overlayState: FloatingOverlayUiState,
     style: FloatingClockStyle
 ) {
-    // Add smooth time updates for preview
+    // Add smooth time updates for preview with optimized frame rate
     var currentMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
             currentMillis = System.currentTimeMillis()
-            delay(10L) // Same smooth update as main clock
+            delay(16L) // 60 FPS - balanced smooth update without excessive recomposition
         }
     }
     
@@ -1151,7 +1165,37 @@ private fun CustomizationTab(
                     )
                 }
                 
-                // Divider between Pulsing & Line 2 Display groups
+                // Divider between Pulsing & Sound Trigger groups
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                
+                // Sound Trigger Group
+                SettingSwitchRow(
+                    title = "Enable Sound Trigger",
+                    checked = style.enableSoundTrigger,
+                    onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(enableSoundTrigger = enabled) } }
+                )
+                
+                // Sound Count Mode (only show if sound trigger is enabled)
+                AnimatedVisibility(
+                    visible = style.enableSoundTrigger,
+                    enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
+                    exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Countdown Mode", style = MaterialTheme.typography.titleSmall)
+                        ConnectedButtonGroup(
+                            selectedOption = style.soundCountMode.toString(),
+                            onOptionSelected = { mode -> viewModel.updateStyle { it.copy(soundCountMode = mode.toInt()) } },
+                            options = listOf(
+                                "3" to "3 Count",
+                                "5" to "5 Count",
+                                "10" to "10 Count"
+                            )
+                        )
+                    }
+                }
+                
+                // Divider between Sound Trigger & Line 2 Display groups
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
                 // Line 2 Display Group
@@ -1166,30 +1210,6 @@ private fun CustomizationTab(
                         "NONE" to "None"
                     )
                 )
-                
-                // Divider between Line 2 Display & Sound Trigger groups
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                
-                // Sound Trigger Group
-                SettingSwitchRow(
-                    title = "Enable Sound Trigger",
-                    checked = style.enableSoundTrigger,
-                    onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(enableSoundTrigger = enabled) } }
-                )
-                
-                // Sound Count Mode (only show if sound trigger is enabled)
-                if (style.enableSoundTrigger) {
-                    Text(text = "Countdown Mode", style = MaterialTheme.typography.titleSmall)
-                    ConnectedButtonGroup(
-                        selectedOption = style.soundCountMode.toString(),
-                        onOptionSelected = { mode -> viewModel.updateStyle { it.copy(soundCountMode = mode.toInt()) } },
-                        options = listOf(
-                            "3" to "3 Count",
-                            "5" to "5 Count",
-                            "10" to "10 Count"
-                        )
-                    )
-                }
             }
         }
 
@@ -1501,20 +1521,19 @@ private fun LivePreviewClock(
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
     val scheduledEventTime = overlayState.eventTimeMillis
     
-    // Use centralized time formatting utilities
-    val currentTime = remember(currentMillis, userPreferences.floatingClockStyle.showMillis) {
+    // Use centralized time formatting utilities with optimized updates
+    // Only update on second changes for date, and 100ms for time with millis
+    val currentTime = remember(currentMillis / if (userPreferences.floatingClockStyle.showMillis) 100 else 1000) {
         DateTimeFormatters.formatTime(
-            currentMillis, 
-            showSeconds = true, 
+            currentMillis,
+            showSeconds = true,
             showMillis = userPreferences.floatingClockStyle.showMillis
         )
     }
     
-    val currentDate = remember(currentMillis) {
+    val currentDate = remember(currentMillis / 60000) { // Update every minute
         DateTimeFormatters.formatDate(currentMillis)
-    }
-    
-    // Format target time with milliseconds if scheduled event exists
+    }    // Format target time with milliseconds if scheduled event exists
     val targetTime = remember(scheduledEventTime) {
         scheduledEventTime?.let { eventMillis ->
             DateTimeFormatters.formatTargetTime(eventMillis)

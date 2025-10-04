@@ -375,7 +375,8 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 lastTimeDifference = Long.MAX_VALUE
             }
             
-            delay(8)
+            // Optimized delay for 60 FPS (16ms) - balanced smooth animation with battery efficiency
+            delay(16)
         }
     }
     
