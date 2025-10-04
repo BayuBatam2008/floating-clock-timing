@@ -223,7 +223,19 @@ fun FloatingClockApp(
         topBar = {
             AnimatedContent(
                 targetState = selectedTab,
-                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                transitionSpec = { 
+                    fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) togetherWith fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    )
+                },
                 label = "topBar"
             ) { tab ->
                 CenterAlignedTopAppBar(
@@ -247,30 +259,23 @@ fun FloatingClockApp(
             }
         },
         floatingActionButton = {
-            // Use Box with graphicsLayer to prevent shadow clipping during animation
-            Box(
-                modifier = Modifier.graphicsLayer {
-                    // Enable hardware acceleration and prevent shadow clipping
-                    compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
-                }
-            ) {
-                AnimatedContent(
-                    targetState = selectedTab,
-                    transitionSpec = { 
-                        fadeIn(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
-                        ) togetherWith fadeOut(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = { 
+                    fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
                         )
-                    },
-                    label = "fab"
-                ) { tab ->
+                    ) togetherWith fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
+                },
+                label = "fab"
+            ) { tab ->
                 when (tab) {
                     MainTab.Clock -> ClockFab(
                         overlayActive = overlayActive,
@@ -306,7 +311,6 @@ fun FloatingClockApp(
                     MainTab.Style -> {}
                 }
             }
-            }
         },
         floatingActionButtonPosition = FabPosition.End,
         snackbarHost = {
@@ -325,7 +329,19 @@ fun FloatingClockApp(
     ) { innerPadding ->
         AnimatedContent(
             targetState = selectedTab,
-            transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
+            transitionSpec = { 
+                fadeIn(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) togetherWith fadeOut(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+            },
             modifier = Modifier.padding(innerPadding),
             label = "tabContent"
         ) { tab ->
@@ -552,7 +568,31 @@ private fun ClockTab(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SyncedTimeCard(currentInstant = currentInstant, timeState = timeState)
 
-        AnimatedVisibility(visible = !hasOverlayPermission, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(
+            visible = !hasOverlayPermission,
+            enter = fadeIn(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + expandVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
+            exit = fadeOut(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            ) + shrinkVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            )
+        ) {
             PermissionCard(onRequest = onRequestOverlayPermission)
         }
 
@@ -591,7 +631,19 @@ private fun SyncedTimeCard(
             )
             AnimatedContent(
                 targetState = Pair(timeState.offsetMillis, timeState.roundTripMillis),
-                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                transitionSpec = { 
+                    fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) togetherWith fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
+                },
                 label = "offset"
             ) { (offset, rtt) ->
                 Text(
@@ -737,7 +789,19 @@ private fun InteractiveTimeSegment(
     ) {
         AnimatedContent(
             targetState = value,
-            transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(120)) },
+            transitionSpec = { 
+                fadeIn(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessHigh
+                    )
+                ) togetherWith fadeOut(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessHigh
+                    )
+                )
+            },
             label = "segment$value"
         ) { displayValue ->
             Text(
@@ -991,7 +1055,31 @@ private fun SyncTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                AnimatedVisibility(visible = timeState.errorMessage != null, enter = fadeIn(), exit = fadeOut()) {
+                AnimatedVisibility(
+                    visible = timeState.errorMessage != null,
+                    enter = fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    )
+                ) {
                     Text(
                         text = timeState.errorMessage.orEmpty(),
                         color = MaterialTheme.colorScheme.error,
@@ -1064,7 +1152,31 @@ private fun SyncTab(
                         Text(text = stringResource(id = R.string.remove))
                     }
                 }
-                AnimatedVisibility(visible = userPreferences.customServers.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
+                AnimatedVisibility(
+                    visible = userPreferences.customServers.isNotEmpty(),
+                    enter = fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    )
+                ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(text = stringResource(id = R.string.custom_servers), style = MaterialTheme.typography.titleSmall)
                         userPreferences.customServers.forEach { server ->
@@ -1104,7 +1216,31 @@ private fun SyncTab(
                         onCheckedChange = viewModel::setAutoSync
                     )
                 }
-                AnimatedVisibility(visible = userPreferences.autoSyncEnabled, enter = fadeIn(), exit = fadeOut()) {
+                AnimatedVisibility(
+                    visible = userPreferences.autoSyncEnabled,
+                    enter = fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    )
+                ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
                             text = stringResource(id = R.string.auto_sync_interval),
