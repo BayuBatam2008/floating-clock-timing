@@ -62,6 +62,7 @@ import com.floatingclock.timing.notification.EventNotificationManager
 import com.floatingclock.timing.data.PerformanceOptimizations
 import com.floatingclock.timing.utils.DateTimeFormatters
 import com.floatingclock.timing.utils.UIComponents
+import com.floatingclock.timing.utils.SoundManager
 import com.floatingclock.timing.data.PerformanceOptimizations.MainThreadOptimizer
 
 
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
     
     private var isPiPModeState: MutableState<Boolean> = mutableStateOf(false)
     private lateinit var eventNotificationManager: EventNotificationManager
+    private var soundManager: SoundManager? = null
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -244,6 +246,8 @@ class MainActivity : ComponentActivity() {
         if (::eventNotificationManager.isInitialized) {
             eventNotificationManager.cancelScheduledNotification()
         }
+        soundManager?.release()
+        soundManager = null
     }
 }
 
@@ -258,6 +262,17 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     
     var progressInfo by remember { mutableStateOf(ProgressInfo(0f, false)) }
     
+    // Sound trigger state
+    var soundTriggered by remember { mutableStateOf(false) }
+    var lastEventTime by remember { mutableLongStateOf(0L) }
+    
+    val context = LocalContext.current
+    val soundManager = remember { 
+        if (context is MainActivity) {
+            context.soundManager ?: SoundManager(context).also { context.soundManager = it }
+        } else null
+    }
+    
     val frameOptimizer = PerformanceOptimizations.rememberFrameRateOptimizer()
     val throttledUpdater = remember { PerformanceOptimizations.ThrottledUpdater(16L) }
     
@@ -265,6 +280,14 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     val overlayState by viewModel.overlayState.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
     val scheduledEventTime = overlayState.eventTimeMillis
+    
+    // Reset sound trigger when event changes
+    LaunchedEffect(scheduledEventTime) {
+        if (scheduledEventTime != lastEventTime) {
+            soundTriggered = false
+            lastEventTime = scheduledEventTime ?: 0L
+        }
+    }
     
     LaunchedEffect(timeState, scheduledEventTime, userPreferences.floatingClockStyle.showMillis, userPreferences.floatingClockStyle.progressActivationSeconds) {
         while (true) {
@@ -328,6 +351,23 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                         ProgressInfo(progress.coerceIn(0f, 1f), true)
                     }
                     else -> ProgressInfo(0f, false)
+                }
+                
+                // Sound trigger logic
+                if (userPreferences.floatingClockStyle.enableSoundTrigger && !soundTriggered) {
+                    val countMode = when (userPreferences.floatingClockStyle.soundCountMode) {
+                        3 -> SoundManager.CountMode.THREE
+                        5 -> SoundManager.CountMode.FIVE
+                        10 -> SoundManager.CountMode.TEN
+                        else -> SoundManager.CountMode.THREE
+                    }
+                    val triggerWindowMs = (countMode.prepSeconds + 3) * 1000L
+                    
+                    // Trigger sound when within countdown window and approaching target time
+                    if (timeDifference in 0..triggerWindowMs) {
+                        soundTriggered = true
+                        soundManager?.startCountdown(timeDifference, countMode)
+                    }
                 }
             } else {
                 progressInfo = ProgressInfo(0f, false)

@@ -17,7 +17,9 @@ data class FloatingClockStyle(
     val progressActivationSeconds: Int = 5,
     val enablePulsing: Boolean = true,
     val pulsingSpeedMs: Int = 500,
-    val line2DisplayMode: String = Line2DisplayMode.DATE_ONLY.name
+    val line2DisplayMode: String = Line2DisplayMode.DATE_ONLY.name,
+    val enableSoundTrigger: Boolean = false,
+    val soundCountMode: Int = 3 // 3, 5, or 10 count
 ) {
     fun getLine2DisplayMode(): Line2DisplayMode = try {
         Line2DisplayMode.valueOf(line2DisplayMode)

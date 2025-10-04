@@ -1166,6 +1166,30 @@ private fun CustomizationTab(
                         "NONE" to "None"
                     )
                 )
+                
+                // Divider between Line 2 Display & Sound Trigger groups
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                
+                // Sound Trigger Group
+                SettingSwitchRow(
+                    title = "Enable Sound Trigger",
+                    checked = style.enableSoundTrigger,
+                    onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(enableSoundTrigger = enabled) } }
+                )
+                
+                // Sound Count Mode (only show if sound trigger is enabled)
+                if (style.enableSoundTrigger) {
+                    Text(text = "Countdown Mode", style = MaterialTheme.typography.titleSmall)
+                    ConnectedButtonGroup(
+                        selectedOption = style.soundCountMode.toString(),
+                        onOptionSelected = { mode -> viewModel.updateStyle { it.copy(soundCountMode = mode.toInt()) } },
+                        options = listOf(
+                            "3" to "3 Count",
+                            "5" to "5 Count",
+                            "10" to "10 Count"
+                        )
+                    )
+                }
             }
         }
 
