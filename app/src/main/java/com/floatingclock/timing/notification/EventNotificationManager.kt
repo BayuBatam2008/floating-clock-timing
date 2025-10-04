@@ -14,11 +14,10 @@ import com.floatingclock.timing.MainActivity
 import com.floatingclock.timing.R
 
 /**
- * Efficient notification manager yang menggunakan AlarmManager
- * untuk scheduling tepat tanpa perlu polling/checking setiap 30 detik.
- * JAUH LEBIH HEMAT RESOURCE!
+ * Manages event notifications using AlarmManager for precise scheduling.
+ * Sends reminders 5 minutes before events.
  */
-class EfficientNotificationManager(private val context: Context) {
+class EventNotificationManager(private val context: Context) {
     
     companion object {
         private const val CHANNEL_ID = "floating_clock_5min_reminders"
@@ -38,13 +37,12 @@ class EfficientNotificationManager(private val context: Context) {
     }
     
     /**
-     * Schedule notification 5 MENIT SEBELUM event - HANYA SATU ALARM!
-     * Resource-efficient approach untuk remind user 5 menit sebelum event.
+     * Schedules a notification 5 minutes before the event.
      */
     fun scheduleEventNotification(eventName: String, eventTimeMillis: Long) {
         val now = System.currentTimeMillis()
-        val fiveMinutesInMillis = 5 * 60 * 1000L // 5 minutes in milliseconds
-        val notificationTime = eventTimeMillis - fiveMinutesInMillis // 5 minutes BEFORE event
+        val fiveMinutesInMillis = 5 * 60 * 1000L
+        val notificationTime = eventTimeMillis - fiveMinutesInMillis
         val timeUntilNotification = notificationTime - now
         
         val eventTimeFormatted = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(eventTimeMillis))
@@ -56,16 +54,13 @@ class EfficientNotificationManager(private val context: Context) {
         android.util.Log.d("EfficientNotif", "   🔔 Notification Time: $notificationTimeFormatted")
         android.util.Log.d("EfficientNotif", "   ⏳ Notification in: ${timeUntilNotification / 1000}s (${timeUntilNotification / 60000} minutes)")
         
-        // Cancel existing alarm first
         cancelScheduledNotification()
         
-        // Don't schedule if notification time is in the past
         if (timeUntilNotification <= 0) {
             android.util.Log.w("EfficientNotif", "⚠️ 5-minute reminder time has passed - event too close or in past")
             return
         }
         
-        // Create intent untuk alarm receiver
         val intent = Intent(context, EventAlarmReceiver::class.java).apply {
             putExtra(EXTRA_EVENT_NAME, eventName)
             putExtra(EXTRA_EVENT_TIME, eventTimeMillis)
@@ -80,7 +75,6 @@ class EfficientNotificationManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        // Schedule exact alarm - 5 MENIT SEBELUM EVENT!
         try {
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
@@ -91,7 +85,6 @@ class EfficientNotificationManager(private val context: Context) {
             android.util.Log.i("EfficientNotif", "   🔔 Will remind in ${timeUntilNotification / 60000} minutes")
         } catch (e: SecurityException) {
             android.util.Log.w("EfficientNotif", "❌ Exact alarm permission denied, using regular alarm: ${e.message}")
-            // Fallback to regular alarm if exact alarm permission denied
             alarmManager.set(
                 AlarmManager.RTC_WAKEUP,
                 notificationTime,
@@ -122,12 +115,11 @@ class EfficientNotificationManager(private val context: Context) {
     }
     
     /**
-     * Show 5-minute reminder notification - HANYA INI YANG AKAN MUNCUL!
+     * Shows the 5-minute reminder notification.
      */
     fun showFiveMinuteReminder(eventName: String, eventTimeMillis: Long) {
         android.util.Log.d("EfficientNotif", "⏰ Showing 5-minute reminder for: $eventName")
         
-        // Check notification permission first
         if (!notificationManager.areNotificationsEnabled()) {
             android.util.Log.w("EfficientNotif", "❌ Notifications are disabled!")
             return
@@ -139,7 +131,6 @@ class EfficientNotificationManager(private val context: Context) {
         val message = "$eventName starts in 5 minutes"
         val fullMessage = "$message (at $eventTimeFormatted)"
         
-        // Create intent to open main activity
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("from_notification", true)
@@ -214,12 +205,12 @@ class EfficientNotificationManager(private val context: Context) {
 class EventAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val now = System.currentTimeMillis()
-        val eventName = intent.getStringExtra(EfficientNotificationManager.EXTRA_EVENT_NAME) ?: "Event"
-        val eventTime = intent.getLongExtra(EfficientNotificationManager.EXTRA_EVENT_TIME, 0L)
+        val eventName = intent.getStringExtra(EventNotificationManager.EXTRA_EVENT_NAME) ?: "Event"
+        val eventTime = intent.getLongExtra(EventNotificationManager.EXTRA_EVENT_TIME, 0L)
         val notificationTime = intent.getLongExtra("notification_time", 0L)
         
-        val actualDelay = now - notificationTime // Delay from expected notification time
-        val minutesUntilEvent = (eventTime - now) / (60 * 1000L) // Minutes until actual event
+        val actualDelay = now - notificationTime
+        val minutesUntilEvent = (eventTime - now) / (60 * 1000L)
         
         android.util.Log.i("EventAlarmReceiver", "⏰ 5-MINUTE REMINDER ALARM TRIGGERED!")
         android.util.Log.i("EventAlarmReceiver", "   📝 Event: $eventName")
@@ -228,8 +219,7 @@ class EventAlarmReceiver : BroadcastReceiver() {
         android.util.Log.i("EventAlarmReceiver", "   ⏳ Minutes until event: $minutesUntilEvent")
         android.util.Log.i("EventAlarmReceiver", "   ⚡ Notification delay: ${actualDelay}ms")
         
-        // Show 5-minute reminder notification
-        val notificationManager = EfficientNotificationManager(context)
+        val notificationManager = EventNotificationManager(context)
         notificationManager.showFiveMinuteReminder(eventName, eventTime)
         
         android.util.Log.i("EventAlarmReceiver", "✅ 5-minute reminder notification sent successfully")

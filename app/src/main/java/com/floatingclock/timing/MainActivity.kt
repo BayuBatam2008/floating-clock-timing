@@ -58,7 +58,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.floatingclock.timing.ui.FloatingClockApp
 import com.floatingclock.timing.ui.theme.FloatingClockTheme
-import com.floatingclock.timing.notification.EfficientNotificationManager
+import com.floatingclock.timing.notification.EventNotificationManager
 import com.floatingclock.timing.data.PerformanceOptimizations
 import com.floatingclock.timing.utils.DateTimeFormatters
 import com.floatingclock.timing.utils.UIComponents
@@ -75,13 +75,9 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels { MainViewModel.Factory }
     
-    // State for PiP mode detection
     private var isPiPModeState: MutableState<Boolean> = mutableStateOf(false)
+    private lateinit var eventNotificationManager: EventNotificationManager
     
-    // Efficient notification manager - JAUH LEBIH HEMAT RESOURCE!
-    private lateinit var efficientNotificationManager: EfficientNotificationManager
-    
-    // Activity Result Launcher for permissions
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -98,13 +94,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Initialize efficient notification system
-        efficientNotificationManager = EfficientNotificationManager(this)
-        
-        // FORCE REQUEST ALL PERMISSIONS
+        eventNotificationManager = EventNotificationManager(this)
         requestAllNotificationPermissions()
-        
-        // Setup efficient event notification scheduling untuk REAL EVENTS
         setupEfficientEventNotifications()
         
         android.util.Log.d("MainActivity", "✅ Notification system ready for real events!")
@@ -138,11 +129,9 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (isInPiP) {
-                    // Show floating clock in PiP mode
                     android.util.Log.d("MainActivity", "Showing PictureInPictureFloatingClock")
                     PictureInPictureFloatingClock(viewModel)
                 } else {
-                    // Show main app
                     android.util.Log.d("MainActivity", "Showing FloatingClockApp")
                     FloatingClockApp(
                         viewModel = viewModel,
@@ -163,14 +152,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        // Update PiP state immediately when mode changes
         android.util.Log.d("MainActivity", "PiP mode changed to: $isInPictureInPictureMode")
         isPiPModeState.value = isInPictureInPictureMode
     }
 
     private fun enterPictureInPicture() {
         val params = PictureInPictureParams.Builder()
-            .setAspectRatio(Rational(23, 10)) // 2.3 aspect ratio - safely within valid range
+            .setAspectRatio(Rational(23, 10))
             .apply {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     setAutoEnterEnabled(true)
@@ -181,26 +169,18 @@ class MainActivity : ComponentActivity() {
         enterPictureInPictureMode(params)
     }
     
-    // Track last scheduled event to avoid duplicate scheduling
     private var lastScheduledEventTime: Long? = null
     
     /**
-     * Setup efficient 5-minute reminder notifications - JAUH LEBIH HEMAT RESOURCE!
-     * Menggunakan AlarmManager untuk schedule reminder 5 MENIT SEBELUM event,
-     * bukan polling setiap 30 detik seperti sebelumnya.
+     * Sets up event notifications with 5-minute reminders.
      */
     private fun setupEfficientEventNotifications() {
-        // Clean setup - no old services to stop
-        
         android.util.Log.d("EfficientNotif", "🎯 Setting up real event notification monitoring...")
         
-        // Monitor events and schedule notifications efficiently with debouncing
         lifecycleScope.launch {
-            // Combine both states untuk get complete event info
             viewModel.overlayState.collect { overlayState ->
                 val newEventTime = overlayState.eventTimeMillis
                 
-                // Skip if same event already scheduled (avoid spam)
                 if (newEventTime == lastScheduledEventTime) {
                     return@collect
                 }
@@ -216,9 +196,8 @@ class MainActivity : ComponentActivity() {
                     android.util.Log.i("EfficientNotif", "📅 Real event detected: $eventName at ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(newEventTime))}")
                     android.util.Log.i("EfficientNotif", "   ⏳ Time until event: ${timeUntilEvent / 60000} minutes")
                     
-                    // Schedule 5-minute reminder HANYA jika event masih lebih dari 5 menit
                     if (timeUntilEvent > fiveMinutesInMillis) {
-                        efficientNotificationManager.scheduleEventNotification(eventName, newEventTime)
+                        eventNotificationManager.scheduleEventNotification(eventName, newEventTime)
                         android.util.Log.i("EfficientNotif", "⏰ Scheduled 5-minute reminder for: $eventName")
                     } else if (timeUntilEvent > 0) {
                         android.util.Log.w("EfficientNotif", "⚠️ Event too close (${timeUntilEvent / 60000} minutes) - no 5-minute reminder needed")
@@ -226,17 +205,13 @@ class MainActivity : ComponentActivity() {
                         android.util.Log.w("EfficientNotif", "⚠️ Event is in the past - no reminder needed")
                     }
                 } else {
-                    // Cancel notification jika tidak ada event
-                    efficientNotificationManager.cancelScheduledNotification()
+                    eventNotificationManager.cancelScheduledNotification()
                     android.util.Log.i("EfficientNotif", "❌ No active events - cancelled 5-minute reminders")
                 }
             }
         }
     }
     
-    /**
-     * Get display name untuk event berdasarkan waktu
-     */
     private fun getEventDisplayName(eventTimeMillis: Long): String {
         val formatter = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
         val timeString = formatter.format(java.util.Date(eventTimeMillis))
@@ -246,7 +221,6 @@ class MainActivity : ComponentActivity() {
     private fun requestAllNotificationPermissions() {
         android.util.Log.d("MainActivity", "=== REQUESTING ALL PERMISSIONS ===")
         
-        // Request notification permission for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 android.util.Log.d("MainActivity", "Requesting POST_NOTIFICATIONS permission")
@@ -256,7 +230,6 @@ class MainActivity : ComponentActivity() {
             }
         }
         
-        // Check exact alarm permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.SCHEDULE_EXACT_ALARM) != PackageManager.PERMISSION_GRANTED) {
                 android.util.Log.d("MainActivity", "SCHEDULE_EXACT_ALARM permission not granted")
@@ -268,9 +241,8 @@ class MainActivity : ComponentActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        // Cancel notifications when app is destroyed
-        if (::efficientNotificationManager.isInitialized) {
-            efficientNotificationManager.cancelScheduledNotification()
+        if (::eventNotificationManager.isInitialized) {
+            eventNotificationManager.cancelScheduledNotification()
         }
     }
 }
@@ -280,47 +252,32 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     var currentTime by remember { mutableStateOf("") }
     var currentDate by remember { mutableStateOf("") }
     
-    // Pulsing animation state
     var isPulsing by remember { mutableStateOf(false) }
     var pulsingStartTime by remember { mutableLongStateOf(0L) }
     var lastTimeDifference by remember { mutableLongStateOf(Long.MAX_VALUE) }
     
-    // Progress state  
     var progressInfo by remember { mutableStateOf(ProgressInfo(0f, false)) }
     
-    // Performance optimizations
     val frameOptimizer = PerformanceOptimizations.rememberFrameRateOptimizer()
     val throttledUpdater = remember { PerformanceOptimizations.ThrottledUpdater(16L) }
     
-    // Get states including user preferences
     val timeState by viewModel.timeState.collectAsState()
     val overlayState by viewModel.overlayState.collectAsState()
     val userPreferences by viewModel.userPreferences.collectAsState()
     val scheduledEventTime = overlayState.eventTimeMillis
     
-    // Use centralized formatters for consistency
-    
-    // Performance monitoring
-    PerformanceOptimizations.PerformanceMonitor("PiPClock") { frameRate, memoryMb ->
-        // Log performance metrics if needed for debugging
-    }
-    
-    // Single optimized LaunchedEffect for both time and progress updates
     LaunchedEffect(timeState, scheduledEventTime, userPreferences.floatingClockStyle.showMillis, userPreferences.floatingClockStyle.progressActivationSeconds) {
         while (true) {
-            // Skip frame if performance optimizer says so
             if (frameOptimizer.shouldSkipFrame()) {
                 delay(1L)
                 continue
             }
             
-            // Throttled updates for better performance
             if (!throttledUpdater.shouldUpdate()) {
                 delay(4L)
                 continue
             }
             
-            // Get accurate time once per frame
             val now = if (timeState.isInitialized) {
                 val currentState = timeState
                 val elapsedDelta = android.os.SystemClock.elapsedRealtime() - currentState.baseElapsedRealtimeMillis
@@ -329,7 +286,6 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 System.currentTimeMillis()
             }
             
-            // Update time display using optimized background formatting
             MainThreadOptimizer.executeOffMainThread(
                 operation = {
                     Pair(
@@ -343,11 +299,9 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 }
             )
             
-            // Update progress and pulsing if scheduled event exists
             if (scheduledEventTime != null) {
                 val timeDifference = scheduledEventTime - now
                 
-                // Precise target time detection
                 if (!isPulsing && 
                     ((lastTimeDifference > 0L && timeDifference <= 0L) ||
                      (timeDifference == 0L) ||
@@ -358,12 +312,10 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 
                 lastTimeDifference = timeDifference
                 
-                // Stop pulsing after 5 seconds
                 if (isPulsing && (now - pulsingStartTime) >= 5000L) {
                     isPulsing = false
                 }
                 
-                // Update progress based on user preferences
                 val activationMs = userPreferences.floatingClockStyle.progressActivationSeconds * 1000L
                 progressInfo = when {
                     timeDifference > activationMs -> ProgressInfo(0f, false)
@@ -378,33 +330,28 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                     else -> ProgressInfo(0f, false)
                 }
             } else {
-                // Reset states when no scheduled event
                 progressInfo = ProgressInfo(0f, false)
                 isPulsing = false
                 lastTimeDifference = Long.MAX_VALUE
             }
             
-            delay(8) // Optimized 120 FPS update loop for smoother animation
+            delay(8)
         }
     }
     
-    // Format target time if scheduled event exists using centralized formatter
     val targetTime = remember(scheduledEventTime) {
         scheduledEventTime?.let { eventMillis ->
             DateTimeFormatters.formatTargetTime(eventMillis)
         }
     }
     
-    // Always use Material3 dynamic colors
     val primaryColor = MaterialTheme.colorScheme.primary
     val passiveColor = MaterialTheme.colorScheme.onSurfaceVariant
     val surfaceColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.95f)
     
-    // Pulsing animation colors
     val pulsingColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
     val normalColor = surfaceColor
     
-    // Animate background color based on pulsing state
     val animatedBackgroundColor by animateColorAsState(
         targetValue = if (isPulsing) pulsingColor else normalColor,
         animationSpec = if (isPulsing) {
@@ -429,15 +376,13 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Start // Left align the entire column
+            horizontalAlignment = Alignment.Start
         ) {
-            // Line 1: Time - using centralized UI component
             UIComponents.TimeText(
                 text = currentTime,
                 color = primaryColor
             )
             
-            // Line 2: Display based on user preference - using centralized UI component
             UIComponents.Line2Content(
                 displayMode = userPreferences.floatingClockStyle.getLine2DisplayMode(),
                 currentDate = currentDate,
@@ -446,12 +391,10 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 targetColor = if (progressInfo.isActive) primaryColor else passiveColor
             )
             
-            // Add padding between line 2 and line 3
             if (scheduledEventTime != null) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
             
-            // Line 3: Standard Material 3 Linear Progress Indicator
             if (scheduledEventTime != null) {
                 LinearProgressIndicator(
                     progress = { progressInfo.progress },
