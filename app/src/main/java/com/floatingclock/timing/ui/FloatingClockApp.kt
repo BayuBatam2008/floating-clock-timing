@@ -266,63 +266,68 @@ fun FloatingClockApp(
             }
         },
         floatingActionButton = {
-            // Wrap in Card to maintain proper shadow rendering during animations
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-            ) {
-                AnimatedContent(
-                    targetState = selectedTab,
-                    transitionSpec = { 
-                        fadeIn(
-                            animationSpec = tween(
-                                durationMillis = 220,
-                                easing = FastOutSlowInEasing
-                            )
-                        ) togetherWith fadeOut(
-                            animationSpec = tween(
-                                durationMillis = 180,
-                                easing = FastOutSlowInEasing
-                            )
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = { 
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 220,
+                            easing = FastOutSlowInEasing
                         )
-                    },
-                    label = "fab"
-                ) { tab ->
-                    when (tab) {
-                        MainTab.Clock -> ClockFab(
-                            overlayActive = overlayActive,
-                            hasOverlayPermission = hasOverlayPermission,
-                            onRequestOverlayPermission = onRequestOverlayPermission,
-                            onStartOverlay = {
-                                // Only enter PiP mode, don't start overlay service
-                                onEnterPip()
-                            },
-                            onStopOverlay = viewModel::hideOverlay,
-                            expanded = fabExpanded
+                    ) + scaleIn(
+                        initialScale = 0.92f,
+                        animationSpec = tween(
+                            durationMillis = 220,
+                            easing = FastOutSlowInEasing
                         )
-                        MainTab.Events -> EventsFab(
-                            isSelectionMode = eventsSelectionMode,
-                            selectedCount = eventsSelectedEvents.size,
-                            onCreateEvent = { 
-                                eventViewModel.showCreateEventDialog()
-                            },
-                            onDeleteSelected = { 
-                                eventsSelectedEvents.forEach { eventId ->
-                                    eventViewModel.deleteEvent(eventId)
-                                }
-                                eventsSelectedEvents = emptySet()
-                                eventsSelectionMode = false
-                            },
-                            expanded = fabExpanded
+                    ) togetherWith fadeOut(
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
-                        MainTab.Sync -> SyncFab(
-                            isSyncing = timeState.isSyncing,
-                            onSync = viewModel::syncNow,
-                            expanded = fabExpanded
+                    ) + scaleOut(
+                        targetScale = 0.92f,
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
-                        MainTab.Style -> {}
-                    }
+                    )
+                },
+                label = "fab"
+            ) { tab ->
+                when (tab) {
+                    MainTab.Clock -> ClockFab(
+                        overlayActive = overlayActive,
+                        hasOverlayPermission = hasOverlayPermission,
+                        onRequestOverlayPermission = onRequestOverlayPermission,
+                        onStartOverlay = {
+                            // Only enter PiP mode, don't start overlay service
+                            onEnterPip()
+                        },
+                        onStopOverlay = viewModel::hideOverlay,
+                        expanded = fabExpanded
+                    )
+                    MainTab.Events -> EventsFab(
+                        isSelectionMode = eventsSelectionMode,
+                        selectedCount = eventsSelectedEvents.size,
+                        onCreateEvent = { 
+                            eventViewModel.showCreateEventDialog()
+                        },
+                        onDeleteSelected = { 
+                            eventsSelectedEvents.forEach { eventId ->
+                                eventViewModel.deleteEvent(eventId)
+                            }
+                            eventsSelectedEvents = emptySet()
+                            eventsSelectionMode = false
+                        },
+                        expanded = fabExpanded
+                    )
+                    MainTab.Sync -> SyncFab(
+                        isSyncing = timeState.isSyncing,
+                        onSync = viewModel::syncNow,
+                        expanded = fabExpanded
+                    )
+                    MainTab.Style -> {}
                 }
             }
         },
@@ -1567,13 +1572,22 @@ private fun ConnectedButtonGroup(
                     ),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
-                    // Direct text without animation wrapper to prevent flash
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                        maxLines = 1
-                    )
+                    // Use Crossfade for ultra-smooth transitions
+                    Crossfade(
+                        targetState = Pair(label, isSelected),
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
+                        ),
+                        label = "button_text_$value"
+                    ) { (text, selected) ->
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }
@@ -1672,22 +1686,11 @@ private fun AutoSyncIntervalSlider(
         val indicatorWidth = 64.dp
         val indicatorWidthPx = with(density) { indicatorWidth.toPx() }
         val fraction = currentIndex.toFloat() / (steps.size - 1).coerceAtLeast(1)
-        
-        // Proportional positioning: shift indicator to avoid edges
-        val availableWidth = constraints.maxWidth.toFloat()
-        val halfIndicator = indicatorWidthPx / 2f
-        val sliderPosition = availableWidth * fraction
-        
-        // Calculate smart offset that keeps indicator on screen
-        val targetOffsetPx = when {
-            sliderPosition < halfIndicator -> 0f // At left edge, align left
-            sliderPosition > availableWidth - halfIndicator -> availableWidth - indicatorWidthPx // At right edge, align right
-            else -> sliderPosition - halfIndicator // Center on slider thumb
-        }
+        val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
         
         // Animate offset with responsive spring
         val animatedOffsetPx by animateFloatAsState(
-            targetValue = targetOffsetPx,
+            targetValue = targetOffsetPx.toFloat(),
             animationSpec = spring(
                 dampingRatio = 0.75f,
                 stiffness = Spring.StiffnessMedium
@@ -1789,22 +1792,11 @@ private fun ValueIndicatorSlider(
         } else {
             ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
         }
-        
-        // Proportional positioning: shift indicator to avoid edges
-        val availableWidth = constraints.maxWidth.toFloat()
-        val halfIndicator = indicatorWidthPx / 2f
-        val sliderPosition = availableWidth * fraction
-        
-        // Calculate smart offset that keeps indicator on screen
-        val targetOffsetPx = when {
-            sliderPosition < halfIndicator -> 0f // At left edge, align left
-            sliderPosition > availableWidth - halfIndicator -> availableWidth - indicatorWidthPx // At right edge, align right
-            else -> sliderPosition - halfIndicator // Center on slider thumb
-        }
+        val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
         
         // Animate offset with responsive spring
         val animatedOffsetPx by animateFloatAsState(
-            targetValue = targetOffsetPx,
+            targetValue = targetOffsetPx.toFloat(),
             animationSpec = spring(
                 dampingRatio = 0.75f,
                 stiffness = Spring.StiffnessMedium
