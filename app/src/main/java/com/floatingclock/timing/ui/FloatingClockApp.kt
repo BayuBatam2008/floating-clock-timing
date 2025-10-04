@@ -3,10 +3,13 @@ package com.floatingclock.timing.ui
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Animatable
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
@@ -263,14 +266,14 @@ fun FloatingClockApp(
                 targetState = selectedTab,
                 transitionSpec = { 
                     fadeIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     ) togetherWith fadeOut(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 },
@@ -421,9 +424,9 @@ private fun ClockFab(
         } else {
             MaterialTheme.colorScheme.primaryContainer
         },
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+        animationSpec = tween(
+            durationMillis = 300,
+            easing = FastOutSlowInEasing
         ),
         label = "fabContainerColor"
     )
@@ -434,9 +437,9 @@ private fun ClockFab(
         } else {
             MaterialTheme.colorScheme.onPrimaryContainer
         },
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMedium
+        animationSpec = tween(
+            durationMillis = 300,
+            easing = FastOutSlowInEasing
         ),
         label = "fabContentColor"
     )
@@ -1058,25 +1061,25 @@ private fun SyncTab(
                 AnimatedVisibility(
                     visible = timeState.errorMessage != null,
                     enter = fadeIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     ) + expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
                         )
                     ),
                     exit = fadeOut(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
                     ) + shrinkVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 ) {
@@ -1155,25 +1158,25 @@ private fun SyncTab(
                 AnimatedVisibility(
                     visible = userPreferences.customServers.isNotEmpty(),
                     enter = fadeIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     ) + expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
                         )
                     ),
                     exit = fadeOut(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
                     ) + shrinkVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 ) {
@@ -1219,25 +1222,25 @@ private fun SyncTab(
                 AnimatedVisibility(
                     visible = userPreferences.autoSyncEnabled,
                     enter = fadeIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     ) + expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
                         )
                     ),
                     exit = fadeOut(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
                     ) + shrinkVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 ) {
@@ -1320,25 +1323,25 @@ private fun CustomizationTab(
                 AnimatedVisibility(
                     visible = style.showProgressIndicator,
                     enter = fadeIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     ) + expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
                         )
                     ),
                     exit = fadeOut(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
                     ) + shrinkVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 ) {
@@ -1370,25 +1373,25 @@ private fun CustomizationTab(
                 AnimatedVisibility(
                     visible = style.enablePulsing,
                     enter = fadeIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     ) + expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
                         )
                     ),
                     exit = fadeOut(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
                     ) + shrinkVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 ) {
@@ -1415,25 +1418,25 @@ private fun CustomizationTab(
                 AnimatedVisibility(
                     visible = style.enableSoundTrigger,
                     enter = fadeIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     ) + expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
+                        animationSpec = tween(
+                            durationMillis = 250,
+                            easing = FastOutSlowInEasing
                         )
                     ),
                     exit = fadeOut(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            easing = FastOutSlowInEasing
                         )
                     ) + shrinkVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessHigh
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 ) {
@@ -1504,6 +1507,33 @@ private fun ConnectedButtonGroup(
             options.forEachIndexed { index, (value, label) ->
                 val isSelected = selectedOption == value
                 
+                // Animate button colors with fast Material 3 timing
+                val containerColor by animateColorAsState(
+                    targetValue = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        Color.Transparent
+                    },
+                    animationSpec = tween(
+                        durationMillis = 200,
+                        easing = FastOutSlowInEasing
+                    ),
+                    label = "button_container_$value"
+                )
+                
+                val contentColor by animateColorAsState(
+                    targetValue = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    animationSpec = tween(
+                        durationMillis = 200,
+                        easing = FastOutSlowInEasing
+                    ),
+                    label = "button_content_$value"
+                )
+                
                 Button(
                     onClick = { onOptionSelected(value) },
                     modifier = Modifier
@@ -1511,16 +1541,8 @@ private fun ConnectedButtonGroup(
                         .height(40.dp), // Standard Material 3 height
                     shape = RoundedCornerShape(16.dp), // Individual button rounding
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSelected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            Color.Transparent
-                        },
-                        contentColor = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
+                        containerColor = containerColor,
+                        contentColor = contentColor
                     ),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = if (isSelected) 2.dp else 0.dp,
@@ -1528,12 +1550,20 @@ private fun ConnectedButtonGroup(
                     ),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                        maxLines = 1
-                    )
+                    AnimatedContent(
+                        targetState = isSelected,
+                        transitionSpec = {
+                            fadeIn(tween(150)) togetherWith fadeOut(tween(150))
+                        },
+                        label = "button_text_$value"
+                    ) { selected ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }
@@ -1558,14 +1588,26 @@ private fun PulsingSpeedSelector(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         speedOptions.forEach { (speed, label) ->
+            val isSelected = selectedSpeed == speed
+            
+            // Animate container color with fast Material 3 timing
+            val containerColor by animateColorAsState(
+                targetValue = if (isSelected) 
+                    MaterialTheme.colorScheme.primaryContainer 
+                else 
+                    MaterialTheme.colorScheme.surfaceVariant,
+                animationSpec = tween(
+                    durationMillis = 200,
+                    easing = FastOutSlowInEasing
+                ),
+                label = "chip_color_$speed"
+            )
+            
             AssistChip(
                 onClick = { onSpeedSelected(speed) },
                 label = { Text(label, fontSize = 12.sp) },
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (selectedSpeed == speed) 
-                        MaterialTheme.colorScheme.primaryContainer 
-                    else 
-                        MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = containerColor
                 ),
                 modifier = Modifier.weight(1f)
             )
@@ -1620,7 +1662,17 @@ private fun AutoSyncIntervalSlider(
         val indicatorWidth = 64.dp
         val indicatorWidthPx = with(density) { indicatorWidth.toPx() }
         val fraction = currentIndex.toFloat() / (steps.size - 1).coerceAtLeast(1)
-        val offsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
+        val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
+        
+        // Animate offset with responsive spring
+        val animatedOffsetPx by animateFloatAsState(
+            targetValue = targetOffsetPx.toFloat(),
+            animationSpec = spring(
+                dampingRatio = 0.75f,
+                stiffness = Spring.StiffnessMedium
+            ),
+            label = "slider_offset"
+        )
 
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -1628,7 +1680,7 @@ private fun AutoSyncIntervalSlider(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset { IntOffset(offsetPx, 0) }
+                .offset { IntOffset(animatedOffsetPx.roundToInt(), 0) }
         ) {
             Text(
                 text = "${steps[currentIndex]}",
@@ -1667,7 +1719,13 @@ private fun SettingSwitchRow(
         Text(text = title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         )
     }
 }
@@ -1695,7 +1753,17 @@ private fun ValueIndicatorSlider(
         } else {
             ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
         }
-        val offsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
+        val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
+        
+        // Animate offset with responsive spring
+        val animatedOffsetPx by animateFloatAsState(
+            targetValue = targetOffsetPx.toFloat(),
+            animationSpec = spring(
+                dampingRatio = 0.75f,
+                stiffness = Spring.StiffnessMedium
+            ),
+            label = "value_indicator_offset"
+        )
 
         // Show the value indicator
         Card(
@@ -1704,7 +1772,7 @@ private fun ValueIndicatorSlider(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset { IntOffset(offsetPx, 0) }
+                .offset { IntOffset(animatedOffsetPx.roundToInt(), 0) }
         ) {
             Text(
                 text = when {
