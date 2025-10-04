@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -94,6 +95,7 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -108,6 +110,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -190,8 +193,16 @@ fun FloatingClockApp(
         MainTab.Style -> styleScrollState
     }
     
-    // FAB visibility based on scroll
-    val fabExpanded = currentScrollState.value <= 100
+    // FAB visibility based on scroll with derivedStateOf for performance
+    val fabExpanded by remember {
+        derivedStateOf { currentScrollState.value <= 100 }
+    }
+    
+    // Material 3 expressive animation spec for FAB transitions
+    val fabAnimationSpec: AnimationSpec<Float> = spring(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMediumLow
+    )
     
     // Global SnackbarHost state
     val snackbarHostState = remember { SnackbarHostState() }
@@ -236,11 +247,30 @@ fun FloatingClockApp(
             }
         },
         floatingActionButton = {
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
-                label = "fab"
-            ) { tab ->
+            // Use Box with graphicsLayer to prevent shadow clipping during animation
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    // Enable hardware acceleration and prevent shadow clipping
+                    compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                }
+            ) {
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = { 
+                        fadeIn(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            )
+                        ) togetherWith fadeOut(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            )
+                        )
+                    },
+                    label = "fab"
+                ) { tab ->
                 when (tab) {
                     MainTab.Clock -> ClockFab(
                         overlayActive = overlayActive,
@@ -275,6 +305,7 @@ fun FloatingClockApp(
                     )
                     MainTab.Style -> {}
                 }
+            }
             }
         },
         floatingActionButtonPosition = FabPosition.End,
@@ -367,16 +398,33 @@ private fun ClockFab(
     onStopOverlay: () -> Unit,
     expanded: Boolean = true
 ) {
-    val containerColor = if (overlayActive) {
-        MaterialTheme.colorScheme.errorContainer
-    } else {
-        MaterialTheme.colorScheme.primaryContainer
-    }
-    val contentColor = if (overlayActive) {
-        MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    }
+    // Material 3 expressive color animations
+    val containerColor by animateColorAsState(
+        targetValue = if (overlayActive) {
+            MaterialTheme.colorScheme.errorContainer
+        } else {
+            MaterialTheme.colorScheme.primaryContainer
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "fabContainerColor"
+    )
+    
+    val contentColor by animateColorAsState(
+        targetValue = if (overlayActive) {
+            MaterialTheme.colorScheme.onErrorContainer
+        } else {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "fabContentColor"
+    )
+    
     ExtendedFloatingActionButton(
         onClick = {
             if (overlayActive) {
@@ -1133,17 +1181,43 @@ private fun CustomizationTab(
                 )
                 
                 // Progress Activation Timing (only show if progress indicator is enabled)
-                if (style.showProgressIndicator) {
-                    Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
-                    ValueIndicatorSlider(
-                        value = style.progressActivationSeconds.toFloat(),
-                        onValueChange = { value -> viewModel.updateStyle { currentStyle -> 
-                            currentStyle.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) 
-                        } },
-                        valueRange = 1f..10f,
-                        steps = 8,
-                        label = { "${it.toInt()}s" }
+                AnimatedVisibility(
+                    visible = style.showProgressIndicator,
+                    enter = fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
                     )
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Progress Activation (seconds)", style = MaterialTheme.typography.titleSmall)
+                        ValueIndicatorSlider(
+                            value = style.progressActivationSeconds.toFloat(),
+                            onValueChange = { value -> viewModel.updateStyle { currentStyle -> 
+                                currentStyle.copy(progressActivationSeconds = value.toInt().coerceIn(1, 10)) 
+                            } },
+                            valueRange = 1f..10f,
+                            steps = 8,
+                            label = { "${it.toInt()}s" }
+                        )
+                    }
                 }
                 
                 // Divider between Progress & Pulsing groups
@@ -1157,12 +1231,38 @@ private fun CustomizationTab(
                 )
                 
                 // Pulsing Speed (only show if pulsing is enabled)
-                if (style.enablePulsing) {
-                    Text(text = "Pulsing Speed", style = MaterialTheme.typography.titleSmall)
-                    PulsingSpeedSlider(
-                        value = style.pulsingSpeedMs,
-                        onValueChange = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
+                AnimatedVisibility(
+                    visible = style.enablePulsing,
+                    enter = fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
                     )
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Pulsing Speed", style = MaterialTheme.typography.titleSmall)
+                        PulsingSpeedSlider(
+                            value = style.pulsingSpeedMs,
+                            onValueChange = { speed -> viewModel.updateStyle { it.copy(pulsingSpeedMs = speed) } }
+                        )
+                    }
                 }
                 
                 // Divider between Pulsing & Sound Trigger groups
@@ -1178,8 +1278,28 @@ private fun CustomizationTab(
                 // Sound Count Mode (only show if sound trigger is enabled)
                 AnimatedVisibility(
                     visible = style.enableSoundTrigger,
-                    enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
-                    exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+                    enter = fadeIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    )
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(text = "Countdown Mode", style = MaterialTheme.typography.titleSmall)
