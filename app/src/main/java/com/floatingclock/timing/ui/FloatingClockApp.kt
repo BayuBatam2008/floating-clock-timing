@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Animatable
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -16,6 +17,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
@@ -70,6 +73,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -262,56 +266,63 @@ fun FloatingClockApp(
             }
         },
         floatingActionButton = {
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = { 
-                    fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 200,
-                            easing = FastOutSlowInEasing
+            // Wrap in Card to maintain proper shadow rendering during animations
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+            ) {
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = { 
+                        fadeIn(
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = FastOutSlowInEasing
+                            )
+                        ) togetherWith fadeOut(
+                            animationSpec = tween(
+                                durationMillis = 180,
+                                easing = FastOutSlowInEasing
+                            )
                         )
-                    ) togetherWith fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 150,
-                            easing = FastOutSlowInEasing
+                    },
+                    label = "fab"
+                ) { tab ->
+                    when (tab) {
+                        MainTab.Clock -> ClockFab(
+                            overlayActive = overlayActive,
+                            hasOverlayPermission = hasOverlayPermission,
+                            onRequestOverlayPermission = onRequestOverlayPermission,
+                            onStartOverlay = {
+                                // Only enter PiP mode, don't start overlay service
+                                onEnterPip()
+                            },
+                            onStopOverlay = viewModel::hideOverlay,
+                            expanded = fabExpanded
                         )
-                    )
-                },
-                label = "fab"
-            ) { tab ->
-                when (tab) {
-                    MainTab.Clock -> ClockFab(
-                        overlayActive = overlayActive,
-                        hasOverlayPermission = hasOverlayPermission,
-                        onRequestOverlayPermission = onRequestOverlayPermission,
-                        onStartOverlay = {
-                            // Only enter PiP mode, don't start overlay service
-                            onEnterPip()
-                        },
-                        onStopOverlay = viewModel::hideOverlay,
-                        expanded = fabExpanded
-                    )
-                    MainTab.Events -> EventsFab(
-                        isSelectionMode = eventsSelectionMode,
-                        selectedCount = eventsSelectedEvents.size,
-                        onCreateEvent = { 
-                            eventViewModel.showCreateEventDialog()
-                        },
-                        onDeleteSelected = { 
-                            eventsSelectedEvents.forEach { eventId ->
-                                eventViewModel.deleteEvent(eventId)
-                            }
-                            eventsSelectedEvents = emptySet()
-                            eventsSelectionMode = false
-                        },
-                        expanded = fabExpanded
-                    )
-                    MainTab.Sync -> SyncFab(
-                        isSyncing = timeState.isSyncing,
-                        onSync = viewModel::syncNow,
-                        expanded = fabExpanded
-                    )
-                    MainTab.Style -> {}
+                        MainTab.Events -> EventsFab(
+                            isSelectionMode = eventsSelectionMode,
+                            selectedCount = eventsSelectedEvents.size,
+                            onCreateEvent = { 
+                                eventViewModel.showCreateEventDialog()
+                            },
+                            onDeleteSelected = { 
+                                eventsSelectedEvents.forEach { eventId ->
+                                    eventViewModel.deleteEvent(eventId)
+                                }
+                                eventsSelectedEvents = emptySet()
+                                eventsSelectionMode = false
+                            },
+                            expanded = fabExpanded
+                        )
+                        MainTab.Sync -> SyncFab(
+                            isSyncing = timeState.isSyncing,
+                            onSync = viewModel::syncNow,
+                            expanded = fabExpanded
+                        )
+                        MainTab.Style -> {}
+                    }
                 }
             }
         },
@@ -469,6 +480,12 @@ private fun ClockFab(
         },
         containerColor = containerColor,
         contentColor = contentColor,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 6.dp,
+            pressedElevation = 8.dp,
+            hoveredElevation = 8.dp,
+            focusedElevation = 8.dp
+        ),
         expanded = expanded
     )
 }
@@ -1550,20 +1567,13 @@ private fun ConnectedButtonGroup(
                     ),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
-                    AnimatedContent(
-                        targetState = isSelected,
-                        transitionSpec = {
-                            fadeIn(tween(150)) togetherWith fadeOut(tween(150))
-                        },
-                        label = "button_text_$value"
-                    ) { selected ->
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                            maxLines = 1
-                        )
-                    }
+                    // Direct text without animation wrapper to prevent flash
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                        maxLines = 1
+                    )
                 }
             }
         }
@@ -1662,11 +1672,22 @@ private fun AutoSyncIntervalSlider(
         val indicatorWidth = 64.dp
         val indicatorWidthPx = with(density) { indicatorWidth.toPx() }
         val fraction = currentIndex.toFloat() / (steps.size - 1).coerceAtLeast(1)
-        val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
+        
+        // Proportional positioning: shift indicator to avoid edges
+        val availableWidth = constraints.maxWidth.toFloat()
+        val halfIndicator = indicatorWidthPx / 2f
+        val sliderPosition = availableWidth * fraction
+        
+        // Calculate smart offset that keeps indicator on screen
+        val targetOffsetPx = when {
+            sliderPosition < halfIndicator -> 0f // At left edge, align left
+            sliderPosition > availableWidth - halfIndicator -> availableWidth - indicatorWidthPx // At right edge, align right
+            else -> sliderPosition - halfIndicator // Center on slider thumb
+        }
         
         // Animate offset with responsive spring
         val animatedOffsetPx by animateFloatAsState(
-            targetValue = targetOffsetPx.toFloat(),
+            targetValue = targetOffsetPx,
             animationSpec = spring(
                 dampingRatio = 0.75f,
                 stiffness = Spring.StiffnessMedium
@@ -1712,6 +1733,16 @@ private fun SettingSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    // Animate scale for clear visual feedback
+    val scale by animateFloatAsState(
+        targetValue = if (checked) 1.05f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
+        label = "switch_scale_$title"
+    )
+    
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -1720,6 +1751,11 @@ private fun SettingSwitchRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                 checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -1753,11 +1789,22 @@ private fun ValueIndicatorSlider(
         } else {
             ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
         }
-        val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
+        
+        // Proportional positioning: shift indicator to avoid edges
+        val availableWidth = constraints.maxWidth.toFloat()
+        val halfIndicator = indicatorWidthPx / 2f
+        val sliderPosition = availableWidth * fraction
+        
+        // Calculate smart offset that keeps indicator on screen
+        val targetOffsetPx = when {
+            sliderPosition < halfIndicator -> 0f // At left edge, align left
+            sliderPosition > availableWidth - halfIndicator -> availableWidth - indicatorWidthPx // At right edge, align right
+            else -> sliderPosition - halfIndicator // Center on slider thumb
+        }
         
         // Animate offset with responsive spring
         val animatedOffsetPx by animateFloatAsState(
-            targetValue = targetOffsetPx.toFloat(),
+            targetValue = targetOffsetPx,
             animationSpec = spring(
                 dampingRatio = 0.75f,
                 stiffness = Spring.StiffnessMedium
