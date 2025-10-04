@@ -266,68 +266,63 @@ fun FloatingClockApp(
             }
         },
         floatingActionButton = {
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = { 
-                    fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 220,
-                            easing = FastOutSlowInEasing
+            // Wrap in Card to maintain proper shadow rendering during animations
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+            ) {
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = { 
+                        fadeIn(
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = FastOutSlowInEasing
+                            )
+                        ) togetherWith fadeOut(
+                            animationSpec = tween(
+                                durationMillis = 180,
+                                easing = FastOutSlowInEasing
+                            )
                         )
-                    ) + scaleIn(
-                        initialScale = 0.92f,
-                        animationSpec = tween(
-                            durationMillis = 220,
-                            easing = FastOutSlowInEasing
+                    },
+                    label = "fab"
+                ) { tab ->
+                    when (tab) {
+                        MainTab.Clock -> ClockFab(
+                            overlayActive = overlayActive,
+                            hasOverlayPermission = hasOverlayPermission,
+                            onRequestOverlayPermission = onRequestOverlayPermission,
+                            onStartOverlay = {
+                                // Only enter PiP mode, don't start overlay service
+                                onEnterPip()
+                            },
+                            onStopOverlay = viewModel::hideOverlay,
+                            expanded = fabExpanded
                         )
-                    ) togetherWith fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 150,
-                            easing = FastOutSlowInEasing
+                        MainTab.Events -> EventsFab(
+                            isSelectionMode = eventsSelectionMode,
+                            selectedCount = eventsSelectedEvents.size,
+                            onCreateEvent = { 
+                                eventViewModel.showCreateEventDialog()
+                            },
+                            onDeleteSelected = { 
+                                eventsSelectedEvents.forEach { eventId ->
+                                    eventViewModel.deleteEvent(eventId)
+                                }
+                                eventsSelectedEvents = emptySet()
+                                eventsSelectionMode = false
+                            },
+                            expanded = fabExpanded
                         )
-                    ) + scaleOut(
-                        targetScale = 0.92f,
-                        animationSpec = tween(
-                            durationMillis = 150,
-                            easing = FastOutSlowInEasing
+                        MainTab.Sync -> SyncFab(
+                            isSyncing = timeState.isSyncing,
+                            onSync = viewModel::syncNow,
+                            expanded = fabExpanded
                         )
-                    )
-                },
-                label = "fab"
-            ) { tab ->
-                when (tab) {
-                    MainTab.Clock -> ClockFab(
-                        overlayActive = overlayActive,
-                        hasOverlayPermission = hasOverlayPermission,
-                        onRequestOverlayPermission = onRequestOverlayPermission,
-                        onStartOverlay = {
-                            // Only enter PiP mode, don't start overlay service
-                            onEnterPip()
-                        },
-                        onStopOverlay = viewModel::hideOverlay,
-                        expanded = fabExpanded
-                    )
-                    MainTab.Events -> EventsFab(
-                        isSelectionMode = eventsSelectionMode,
-                        selectedCount = eventsSelectedEvents.size,
-                        onCreateEvent = { 
-                            eventViewModel.showCreateEventDialog()
-                        },
-                        onDeleteSelected = { 
-                            eventsSelectedEvents.forEach { eventId ->
-                                eventViewModel.deleteEvent(eventId)
-                            }
-                            eventsSelectedEvents = emptySet()
-                            eventsSelectionMode = false
-                        },
-                        expanded = fabExpanded
-                    )
-                    MainTab.Sync -> SyncFab(
-                        isSyncing = timeState.isSyncing,
-                        onSync = viewModel::syncNow,
-                        expanded = fabExpanded
-                    )
-                    MainTab.Style -> {}
+                        MainTab.Style -> {}
+                    }
                 }
             }
         },
