@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
     
     private var isPiPModeState: MutableState<Boolean> = mutableStateOf(false)
     private lateinit var eventNotificationManager: EventNotificationManager
-    private var soundManager: SoundManager? = null
+    internal var soundManager: SoundManager? = null
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()

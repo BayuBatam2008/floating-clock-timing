@@ -89,14 +89,14 @@ class SoundManager(private val context: Context) {
                     android.util.Log.d("SoundManager", "Prep beep ${i + 1}/$prepBeeps")
                     
                     if (i < prepBeeps - 1) { // Don't delay after last prep beep
-                        delay(1000 - PREP_BEEP_DURATION)
+                        delay(1000L - PREP_BEEP_DURATION)
                     }
                 }
                 
                 if (!isActive) return@launch
                 
                 // Wait for remaining time to target (should be minimal)
-                delay(100)
+                delay(100L)
                 
                 // Play start beeps continuously for 3 seconds
                 val startTime = System.currentTimeMillis()
@@ -104,7 +104,7 @@ class SoundManager(private val context: Context) {
                 
                 while (isActive && (System.currentTimeMillis() - startTime) < START_BEEP_TOTAL_DURATION) {
                     playTone(START_TONE, START_BEEP_DURATION)
-                    delay(200) // Short pause between beeps
+                    delay(200L) // Short pause between beeps
                 }
                 
                 android.util.Log.d("SoundManager", "Sound sequence completed")
