@@ -18,6 +18,7 @@ For development builds from the latest commits, check the [Actions](https://gith
 - **[Quick Start Guide](QUICK_START.md)** - Get started in 5 minutes
 - **[Installation Guide](INSTALLATION.md)** - Detailed installation instructions
 - **[Workflows Guide](.github/WORKFLOWS.md)** - CI/CD and release documentation
+- **[Troubleshooting Guide](.github/TROUBLESHOOTING.md)** - Common issues and solutions
 
 ## Features
 
