@@ -3,7 +3,7 @@
 [![Android CI Build](https://github.com/BayuBatam2008/floating-clock-timing/actions/workflows/android-build.yml/badge.svg)](https://github.com/BayuBatam2008/floating-clock-timing/actions/workflows/android-build.yml)
 [![Release Build](https://github.com/BayuBatam2008/floating-clock-timing/actions/workflows/release.yml/badge.svg)](https://github.com/BayuBatam2008/floating-clock-timing/actions/workflows/release.yml)
 [![GitHub release](https://img.shields.io/github/v/release/BayuBatam2008/floating-clock-timing)](https://github.com/BayuBatam2008/floating-clock-timing/releases)
-[![License](https://img.shields.io/github/license/BayuBatam2008/floating-clock-timing)](LICENSE)
+[![License](https://img.shields.io/github/license/BayuBatam2008/floating-clock-timing)](LICENSE) 
 
 An Android application that provides a precise floating clock overlay with NTP time synchronization and event scheduling capabilities.
 
