@@ -25,31 +25,44 @@ android {
     }
 
     signingConfigs {
-        // Debug signing config (uses default Android debug keystore)
-        getByName("debug") {
-            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
+        // Check if debug keystore exists
+        val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
         
-        // Release signing config
-        // For now, use debug keystore. Replace with your own keystore later.
-        create("release") {
-            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        if (debugKeystoreFile.exists()) {
+            // Debug signing config (uses default Android debug keystore)
+            getByName("debug") {
+                storeFile = debugKeystoreFile
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+            
+            // Release signing config
+            // For now, use debug keystore. Replace with your own keystore later.
+            create("release") {
+                storeFile = debugKeystoreFile
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debug")
+            // Only set signing config if keystore exists
+            val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            if (debugKeystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
         
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Only set signing config if keystore exists
+            val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            if (debugKeystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
