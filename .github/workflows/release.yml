@@ -50,26 +50,15 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    - name: Align APK with latest build-tools
+    - name: Verify APK exists
       run: |
-        # Find latest build-tools version
-        BUILD_TOOLS_VERSION=$(ls -1 ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
-        echo "Using build-tools version: $BUILD_TOOLS_VERSION"
-        
-        ${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/zipalign -v 4 \
-          app/build/outputs/apk/release/app-release-unsigned.apk \
-          app/build/outputs/apk/release/app-release.apk
-
-    - name: Sign Release APK (if keystore exists)
-      id: sign_app
-      uses: ilharp/sign-android-release@v1.0.4
-      with:
-        buildToolsVersion: 35.0.0
-        releaseDir: app/build/outputs/apk/release
-        signingKey: ${{ secrets.ANDROID_KEYSTORE }}
-        keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
-        keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+          echo "✅ Release APK built successfully"
+          ls -lh app/build/outputs/apk/release/app-release.apk
+        else
+          echo "❌ Release APK not found"
+          exit 1
+        fi
       
     - name: Get build info
       id: build_info
