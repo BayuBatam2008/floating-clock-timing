@@ -48,7 +48,40 @@ Already fixed in workflows with:
 
 ---
 
-### 3. Build Failed - Dependency Resolution
+### 3. Gradle Version Mismatch
+
+**Error Message:**
+```
+Minimum supported Gradle version is 8.13. Current version is 8.9.
+Try updating the 'distributionUrl' property in gradle-wrapper.properties to 'gradle-8.13-bin.zip'.
+```
+
+**Cause:**
+- Android Gradle Plugin (AGP) version requires newer Gradle version
+- Mismatch between AGP in `build.gradle.kts` and Gradle wrapper version
+
+**Solution:**
+```bash
+# Update Gradle wrapper to required version
+./gradlew wrapper --gradle-version 8.13
+
+# Or manually edit gradle/wrapper/gradle-wrapper.properties
+# Change: distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+
+# Commit and push changes
+git add gradle/wrapper/
+git commit -m "Update Gradle to 8.13"
+git push
+```
+
+**Version Compatibility:**
+- AGP 8.13.0 requires Gradle 8.13+
+- AGP 8.7.x requires Gradle 8.9+
+- AGP 8.4.x requires Gradle 8.6+
+
+---
+
+### 4. Build Failed - Dependency Resolution
 
 **Error Message:**
 ```
@@ -67,7 +100,7 @@ Could not resolve all dependencies
 
 ---
 
-### 4. Out of Memory Error
+### 5. Out of Memory Error
 
 **Error Message:**
 ```
@@ -93,7 +126,7 @@ Or add to workflow:
 
 ---
 
-### 5. SDK Not Found
+### 6. SDK Not Found
 
 **Error Message:**
 ```
@@ -114,7 +147,7 @@ GitHub Actions will use its own SDK path.
 
 ---
 
-### 6. Signing Configuration Error
+### 7. Signing Configuration Error
 
 **Error Message:**
 ```
@@ -145,7 +178,7 @@ For signed releases, add secrets:
 
 ---
 
-### 7. Workflow Not Triggering
+### 8. Workflow Not Triggering
 
 **Possible Causes:**
 
@@ -167,7 +200,7 @@ For signed releases, add secrets:
 
 ---
 
-### 8. Artifact Upload Failed
+### 9. Artifact Upload Failed
 
 **Error Message:**
 ```
@@ -186,7 +219,7 @@ Unable to upload artifact
 
 ---
 
-### 9. Cache Restore Failed
+### 10. Cache Restore Failed
 
 **Error Message:**
 ```
@@ -208,7 +241,7 @@ If persistent, clear cache manually:
 
 ---
 
-### 10. Deprecated Warnings
+### 11. Deprecated Warnings
 
 **Warning Message:**
 ```
