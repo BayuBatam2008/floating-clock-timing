@@ -25,38 +25,21 @@ android {
     }
 
     signingConfigs {
-        // Check if debug keystore exists (only on local development)
-        val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-        
-        if (debugKeystoreFile.exists()) {
-            // Create release signing config only if keystore exists
-            // For now, use debug keystore. Replace with your own keystore later.
-            create("release") {
-                storeFile = debugKeystoreFile
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
+        def keystoreFile = rootProject.file("app/keystore.jks")
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            } else {
+                println "⚠️ Keystore file not found, skipping signing"
             }
-        }
     }
 
     buildTypes {
-        debug {
-            // Debug builds don't need explicit signing config
-            // Android Gradle Plugin will auto-sign debug builds
-        }
         
         release {
-            // Only set signing config if keystore exists
-            val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-            if (debugKeystoreFile.exists()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+           signingConfig signingConfigs.release
         }
     }
 

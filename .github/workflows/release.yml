@@ -25,6 +25,9 @@ jobs:
         distribution: 'temurin'
         cache: gradle
         
+    - name: Decode Keystore
+      run: echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > app/keystore.jks
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
@@ -42,6 +45,25 @@ jobs:
       
     - name: Build Debug APK
       run: ./gradlew assembleDebug --stacktrace
+
+    - name: Sign Release APK (if keystore exists)
+      run: |
+        jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+          -keystore app/keystore.jks \
+          -storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
+          -keypass ${{ secrets.ANDROID_KEY_PASSWORD }} \
+          app/build/outputs/apk/release/app-release-unsigned.apk \
+          ${{ secrets.ANDROID_KEY_ALIAS }}
+
+    - name: Align APK with latest build-tools
+      run: |
+        # Find latest build-tools version
+        BUILD_TOOLS_VERSION=$(ls -1 ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
+        echo "Using build-tools version: $BUILD_TOOLS_VERSION"
+        
+        ${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/zipalign -v 4 \
+          app/build/outputs/apk/release/app-release-unsigned.apk \
+          app/build/outputs/apk/release/app-release.apk
       
     - name: Get build info
       id: build_info
@@ -52,7 +74,7 @@ jobs:
     - name: Prepare release files
       run: |
         mkdir -p release-files
-        cp app/build/outputs/apk/release/app-release-unsigned.apk release-files/floating-clock-timing-${{ steps.version.outputs.version }}-release.apk
+        cp app/build/outputs/apk/release/app-release.apk release-files/floating-clock-timing-${{ steps.version.outputs.version }}-release.apk
         cp app/build/outputs/apk/debug/app-debug.apk release-files/floating-clock-timing-${{ steps.version.outputs.version }}-debug.apk
         
     - name: Generate changelog
@@ -92,16 +114,6 @@ jobs:
         ### APK Files
         - **Release APK** (Recommended): Optimized production build
         - **Debug APK**: Development build with debugging enabled
-        
-        ## Features
-        - 🕐 High-precision NTP time synchronization
-        - ⏰ Event scheduling with countdown timers
-        - 🎨 Customizable floating clock overlay
-        - 📱 Picture-in-Picture (PiP) mode support
-        - 🔔 Event notifications with 5-minute reminders
-        - 🎵 Sound trigger with countdown modes (3, 5, 10 count)
-        - 🌈 Material 3 dynamic theming
-        - ⚡ Optimized performance with smooth animations
         
         EOF
         
