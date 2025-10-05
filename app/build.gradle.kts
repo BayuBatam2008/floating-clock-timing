@@ -25,19 +25,11 @@ android {
     }
 
     signingConfigs {
-        // Check if debug keystore exists
+        // Check if debug keystore exists (only on local development)
         val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
         
         if (debugKeystoreFile.exists()) {
-            // Debug signing config (uses default Android debug keystore)
-            getByName("debug") {
-                storeFile = debugKeystoreFile
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
-            
-            // Release signing config
+            // Create release signing config only if keystore exists
             // For now, use debug keystore. Replace with your own keystore later.
             create("release") {
                 storeFile = debugKeystoreFile
@@ -50,11 +42,8 @@ android {
 
     buildTypes {
         debug {
-            // Only set signing config if keystore exists
-            val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-            if (debugKeystoreFile.exists()) {
-                signingConfig = signingConfigs.getByName("debug")
-            }
+            // Debug builds don't need explicit signing config
+            // Android Gradle Plugin will auto-sign debug builds
         }
         
         release {
