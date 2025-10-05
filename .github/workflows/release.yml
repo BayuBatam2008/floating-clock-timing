@@ -1,0 +1,128 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Extract version from tag
+      id: version
+      run: |
+        TAG=${GITHUB_REF#refs/tags/}
+        VERSION=${TAG#v}
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Building version: $VERSION"
+        
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --stacktrace
+      
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --stacktrace
+      
+    - name: Get build info
+      id: build_info
+      run: |
+        echo "build_date=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+        echo "commit_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        
+    - name: Prepare release files
+      run: |
+        mkdir -p release-files
+        cp app/build/outputs/apk/release/app-release-unsigned.apk release-files/floating-clock-timing-${{ steps.version.outputs.version }}-release.apk
+        cp app/build/outputs/apk/debug/app-debug.apk release-files/floating-clock-timing-${{ steps.version.outputs.version }}-debug.apk
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get previous tag
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        
+        if [ -z "$PREVIOUS_TAG" ]; then
+          echo "No previous tag found, showing all commits"
+          COMMITS=$(git log --pretty=format:"- %s (%h)" --reverse)
+        else
+          echo "Generating changelog from $PREVIOUS_TAG to ${{ steps.version.outputs.tag }}"
+          COMMITS=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --reverse)
+        fi
+        
+        # Save changelog to file
+        cat > release-files/CHANGELOG.md << EOF
+        # Floating Clock Timing ${{ steps.version.outputs.version }}
+        
+        ## What's Changed
+        
+        $COMMITS
+        
+        ## Build Information
+        - **Version**: ${{ steps.version.outputs.version }}
+        - **Build Date**: ${{ steps.build_info.outputs.build_date }}
+        - **Commit**: ${{ steps.build_info.outputs.commit_sha }}
+        
+        ## Installation
+        
+        1. Download the APK file below
+        2. Enable "Install from Unknown Sources" in Android settings
+        3. Install the APK
+        4. Grant necessary permissions (Overlay, Notifications, Alarms)
+        
+        ### APK Files
+        - **Release APK** (Recommended): Optimized production build
+        - **Debug APK**: Development build with debugging enabled
+        
+        ## Features
+        - 🕐 High-precision NTP time synchronization
+        - ⏰ Event scheduling with countdown timers
+        - 🎨 Customizable floating clock overlay
+        - 📱 Picture-in-Picture (PiP) mode support
+        - 🔔 Event notifications with 5-minute reminders
+        - 🎵 Sound trigger with countdown modes (3, 5, 10 count)
+        - 🌈 Material 3 dynamic theming
+        - ⚡ Optimized performance with smooth animations
+        
+        EOF
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          release-files/floating-clock-timing-${{ steps.version.outputs.version }}-release.apk
+          release-files/floating-clock-timing-${{ steps.version.outputs.version }}-debug.apk
+          release-files/CHANGELOG.md
+        body_path: release-files/CHANGELOG.md
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        name: Release ${{ steps.version.outputs.version }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Upload Release APK as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk-${{ steps.version.outputs.version }}
+        path: release-files/*.apk
+        retention-days: 90

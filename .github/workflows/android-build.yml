@@ -1,0 +1,109 @@
+name: Android CI Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --stacktrace
+      
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --stacktrace
+      
+    - name: Sign Release APK (if keystore exists)
+      continue-on-error: true
+      run: |
+        if [ -f "keystore.jks" ]; then
+          echo "Signing APK..."
+          # Add signing configuration here if needed
+        else
+          echo "No keystore found, skipping signing"
+        fi
+        
+    - name: Get commit info
+      id: commit_info
+      run: |
+        echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "commit_msg=$(git log -1 --pretty=%B | head -n 1)" >> $GITHUB_OUTPUT
+        echo "build_date=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+        
+    - name: Rename APK files
+      run: |
+        mkdir -p output
+        cp app/build/outputs/apk/debug/app-debug.apk output/floating-clock-timing-debug-${{ steps.commit_info.outputs.sha_short }}.apk
+        cp app/build/outputs/apk/release/app-release-unsigned.apk output/floating-clock-timing-release-${{ steps.commit_info.outputs.sha_short }}.apk || echo "Release APK not found"
+        
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: floating-clock-timing-debug-${{ steps.commit_info.outputs.sha_short }}
+        path: output/floating-clock-timing-debug-${{ steps.commit_info.outputs.sha_short }}.apk
+        retention-days: 30
+        
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      continue-on-error: true
+      with:
+        name: floating-clock-timing-release-${{ steps.commit_info.outputs.sha_short }}
+        path: output/floating-clock-timing-release-${{ steps.commit_info.outputs.sha_short }}.apk
+        retention-days: 30
+        
+    - name: Create Build Info
+      run: |
+        cat > output/build-info.txt << EOF
+        Floating Clock Timing - Build Information
+        =========================================
+        Commit: ${{ github.sha }}
+        Short SHA: ${{ steps.commit_info.outputs.sha_short }}
+        Branch: ${{ github.ref_name }}
+        Commit Message: ${{ steps.commit_info.outputs.commit_msg }}
+        Build Date: ${{ steps.commit_info.outputs.build_date }}
+        Workflow: ${{ github.workflow }}
+        Run Number: ${{ github.run_number }}
+        Actor: ${{ github.actor }}
+        EOF
+        
+    - name: Upload Build Info
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-info-${{ steps.commit_info.outputs.sha_short }}
+        path: output/build-info.txt
+        retention-days: 30
+        
+    - name: Generate build summary
+      run: |
+        echo "## 🎉 Build Successful!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 APK Files Built" >> $GITHUB_STEP_SUMMARY
+        echo "- **Debug APK**: floating-clock-timing-debug-${{ steps.commit_info.outputs.sha_short }}.apk" >> $GITHUB_STEP_SUMMARY
+        echo "- **Release APK**: floating-clock-timing-release-${{ steps.commit_info.outputs.sha_short }}.apk" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ℹ️ Build Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: \`${{ steps.commit_info.outputs.sha_short }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Message**: ${{ steps.commit_info.outputs.commit_msg }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Date**: ${{ steps.commit_info.outputs.build_date }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📥 Download" >> $GITHUB_STEP_SUMMARY
+        echo "Download the artifacts from the **Artifacts** section below." >> $GITHUB_STEP_SUMMARY
