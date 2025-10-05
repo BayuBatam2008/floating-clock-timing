@@ -26,17 +26,23 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystoreFile = rootProject.file("app/keystore.jks")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "android"
-                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "key0"
-                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: "android"
-                println("✓ Using keystore for signing: ${keystoreFile.absolutePath}")
-            } else {
-                println("⚠️ Keystore file not found at: ${keystoreFile.absolutePath}")
-                println("⚠️ APK will be unsigned")
-            }
+            // Always use keystore file from app directory
+            storeFile = rootProject.file("app/keystore.jks")
+            
+            // Get credentials from environment variables ONLY
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            
+            // Log signing config status (without exposing secrets)
+            println("═══════════════════════════════════════")
+            println("📝 Signing Configuration")
+            println("═══════════════════════════════════════")
+            println("Keystore: ${storeFile?.absolutePath}")
+            println("Store Password: ${if (storePassword != null) "✓ SET" else "✗ NOT SET"}")
+            println("Key Alias: ${if (keyAlias != null) "✓ SET ($keyAlias)" else "✗ NOT SET"}")
+            println("Key Password: ${if (keyPassword != null) "✓ SET" else "✗ NOT SET"}")
+            println("═══════════════════════════════════════")
         }
     }
 
@@ -46,10 +52,9 @@ android {
         }
         
         release {
-            val keystoreFile = rootProject.file("app/keystore.jks")
-            if (keystoreFile.exists()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // Always use release signing config
+            // If env vars are not set, build will fail with clear error
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
