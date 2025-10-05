@@ -1,6 +1,46 @@
 # CI/CD Troubleshooting Guide
 
-Common issues and solutions for GitHub Actions workflows.
+Common issues and solutions for GitHub Actions workflows and APK installation.
+
+## APK Installation Issues
+
+### 1. App not installed as package appears to be invalid (Android 15)
+
+**Error Message:**
+```
+App not installed
+App not installed as package appears to be invalid.
+```
+
+**Affects:** Android 15 (and some Android 14 devices)
+
+**Cause:**
+- APK is not properly signed
+- Missing or invalid digital signature
+- Android 15 enforces stricter signature verification
+
+**Solution:**
+
+The app now includes proper signing configuration. Download the latest release APK from:
+- GitHub Releases: https://github.com/BayuBatam2008/floating-clock-timing/releases
+
+If building from source:
+```bash
+# Clean and rebuild with signing
+./gradlew clean assembleRelease
+
+# APK location
+app/build/outputs/apk/release/app-release.apk
+```
+
+**Verify APK signature:**
+```bash
+jarsigner -verify -verbose app-release.apk
+```
+
+**For developers:** See [APK Signing Guide](.github/SIGNING.md) for detailed signing instructions.
+
+---
 
 ## Common Build Errors
 

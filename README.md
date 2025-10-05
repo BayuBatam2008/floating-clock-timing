@@ -19,6 +19,7 @@ For development builds from the latest commits, check the [Actions](https://gith
 - **[Installation Guide](INSTALLATION.md)** - Detailed installation instructions
 - **[Workflows Guide](.github/WORKFLOWS.md)** - CI/CD and release documentation
 - **[Troubleshooting Guide](.github/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[APK Signing Guide](.github/SIGNING.md)** - How to sign APKs for distribution
 
 ## Features
 
