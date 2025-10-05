@@ -25,21 +25,36 @@ android {
     }
 
     signingConfigs {
-        def keystoreFile = rootProject.file("app/keystore.jks")
+        create("release") {
+            val keystoreFile = rootProject.file("app/keystore.jks")
             if (keystoreFile.exists()) {
-                storeFile keystoreFile
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                storeFile = keystoreFile
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "key0"
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: "android"
+                println("✓ Using keystore for signing: ${keystoreFile.absolutePath}")
             } else {
-                println "⚠️ Keystore file not found, skipping signing"
+                println("⚠️ Keystore file not found at: ${keystoreFile.absolutePath}")
+                println("⚠️ APK will be unsigned")
             }
+        }
     }
 
     buildTypes {
+        debug {
+            // Debug builds are auto-signed by Android Gradle Plugin
+        }
         
         release {
-           signingConfig signingConfigs.release
+            val keystoreFile = rootProject.file("app/keystore.jks")
+            if (keystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -48,8 +63,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     buildFeatures {
