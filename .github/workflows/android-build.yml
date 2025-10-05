@@ -22,26 +22,25 @@ jobs:
         distribution: 'temurin'
         cache: gradle
     
-    - name: Decode Keystore
-      run: echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > app/keystore.jks
-    
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+      run: ./gradlew assembleDebug
       
     - name: Build Release APK
-      run: ./gradlew assembleRelease --stacktrace
-      
+      run: ./gradlew assembleRelease
+
     - name: Sign Release APK (if keystore exists)
-      run: |
-        jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-          -keystore app/keystore.jks \
-          -storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
-          -keypass ${{ secrets.ANDROID_KEY_PASSWORD }} \
-          app/build/outputs/apk/release/app-release-unsigned.apk \
-          ${{ secrets.ANDROID_KEY_ALIAS }}
+      id: sign_app
+      uses: ilharp/sign-android-release@v1.0.4
+      with:
+        buildToolsVersion: 35.0.0
+        releaseDir: app/build/outputs/apk/release
+        signingKey: ${{ secrets.ANDROID_KEYSTORE }}
+        keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
+        keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     - name: Align APK with latest build-tools
       run: |
