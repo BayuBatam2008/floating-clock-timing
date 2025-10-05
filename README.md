@@ -13,7 +13,11 @@ An Android application that provides a precise floating clock overlay with NTP t
 
 For development builds from the latest commits, check the [Actions](https://github.com/BayuBatam2008/floating-clock-timing/actions) tab and download artifacts.
 
-**Installation Guide**: See [INSTALLATION.md](INSTALLATION.md) for detailed instructions.
+## 📚 Documentation
+
+- **[Quick Start Guide](QUICK_START.md)** - Get started in 5 minutes
+- **[Installation Guide](INSTALLATION.md)** - Detailed installation instructions
+- **[Workflows Guide](.github/WORKFLOWS.md)** - CI/CD and release documentation
 
 ## Features
 
