@@ -27,7 +27,7 @@ android {
     signingConfigs {
         // Debug signing config (uses default Android debug keystore)
         getByName("debug") {
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
@@ -36,7 +36,7 @@ android {
         // Release signing config
         // For now, use debug keystore. Replace with your own keystore later.
         create("release") {
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
