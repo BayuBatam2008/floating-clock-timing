@@ -38,6 +38,16 @@ jobs:
         ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
+    - name: Align APK with latest build-tools
+      run: |
+        # Find latest build-tools version
+        BUILD_TOOLS_VERSION=$(ls -1 ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
+        echo "Using build-tools version: $BUILD_TOOLS_VERSION"
+        
+        ${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/zipalign -v 4 \
+          app/build/outputs/apk/release/app-release-unsigned.apk \
+          app/build/outputs/apk/release/app-release.apk
+
     - name: Sign Release APK (if keystore exists)
       id: sign_app
       uses: ilharp/sign-android-release@v1.0.4
@@ -48,16 +58,6 @@ jobs:
         keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
         keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-
-    - name: Align APK with latest build-tools
-      run: |
-        # Find latest build-tools version
-        BUILD_TOOLS_VERSION=$(ls -1 ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
-        echo "Using build-tools version: $BUILD_TOOLS_VERSION"
-        
-        ${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/zipalign -v 4 \
-          app/build/outputs/apk/release/app-release-unsigned.apk \
-          app/build/outputs/apk/release/app-release.apk
         
     - name: Get commit info
       id: commit_info
