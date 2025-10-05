@@ -44,7 +44,41 @@ jarsigner -verify -verbose app-release.apk
 
 ## Common Build Errors
 
-### 1. Unable to access jarfile gradle-wrapper.jar
+### 1. Keystore file not found for signing config
+
+**Error Message:**
+```
+Execution failed for task ':app:validateSigningDebug'.
+> Keystore file '/home/runner/.android/debug.keystore' not found for signing config 'debug'.
+```
+
+**Affects:** GitHub Actions CI/CD builds
+
+**Cause:**
+- GitHub Actions runner doesn't have debug.keystore file
+- Signing config was trying to use non-existent keystore
+
+**Solution:**
+
+✅ **Already Fixed!** The build configuration now:
+- Checks if keystore file exists before applying signing config
+- Allows unsigned builds in CI (Android auto-signs debug builds)
+- Uses debug keystore if available locally
+
+**Technical Details:**
+```kotlin
+// Conditional signing configuration
+val debugKeystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+if (debugKeystoreFile.exists()) {
+    signingConfig = signingConfigs.getByName("debug")
+}
+```
+
+**Note:** Debug APKs built in CI are unsigned but installable. Release APKs should use proper keystore (see [SIGNING.md](SIGNING.md)).
+
+---
+
+### 2. Unable to access jarfile gradle-wrapper.jar
 
 **Error Message:**
 ```
@@ -69,7 +103,7 @@ git push
 
 ---
 
-### 2. Permission Denied on gradlew
+### 3. Permission Denied on gradlew
 
 **Error Message:**
 ```
@@ -88,7 +122,7 @@ Already fixed in workflows with:
 
 ---
 
-### 3. Gradle Version Mismatch
+### 4. Gradle Version Mismatch
 
 **Error Message:**
 ```
@@ -121,7 +155,7 @@ git push
 
 ---
 
-### 4. Build Failed - Dependency Resolution
+### 5. Build Failed - Dependency Resolution
 
 **Error Message:**
 ```
@@ -140,7 +174,7 @@ Could not resolve all dependencies
 
 ---
 
-### 5. Out of Memory Error
+### 6. Out of Memory Error
 
 **Error Message:**
 ```
@@ -166,7 +200,7 @@ Or add to workflow:
 
 ---
 
-### 6. SDK Not Found
+### 7. SDK Not Found
 
 **Error Message:**
 ```
@@ -187,7 +221,7 @@ GitHub Actions will use its own SDK path.
 
 ---
 
-### 7. Signing Configuration Error
+### 8. Signing Configuration Error
 
 **Error Message:**
 ```
@@ -218,7 +252,7 @@ For signed releases, add secrets:
 
 ---
 
-### 8. Workflow Not Triggering
+### 9. Workflow Not Triggering
 
 **Possible Causes:**
 
@@ -240,7 +274,7 @@ For signed releases, add secrets:
 
 ---
 
-### 9. Artifact Upload Failed
+### 10. Artifact Upload Failed
 
 **Error Message:**
 ```
@@ -259,7 +293,7 @@ Unable to upload artifact
 
 ---
 
-### 10. Cache Restore Failed
+### 11. Cache Restore Failed
 
 **Error Message:**
 ```
@@ -281,7 +315,7 @@ If persistent, clear cache manually:
 
 ---
 
-### 11. Deprecated Warnings
+### 12. Deprecated Warnings
 
 **Warning Message:**
 ```
