@@ -93,6 +93,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -1521,10 +1522,10 @@ private fun ConnectedButtonGroup(
                 .padding(4.dp), // Padding inside container
             horizontalArrangement = Arrangement.spacedBy(2.dp) // Small gap between buttons
         ) {
-            options.forEachIndexed { index, (value, label) ->
+            options.forEach { (value, label) ->
                 val isSelected = selectedOption == value
                 
-                // Animate button colors with fast Material 3 timing
+                // Animate button colors - ONLY colors, nothing else
                 val containerColor by animateColorAsState(
                     targetValue = if (isSelected) {
                         MaterialTheme.colorScheme.primary
@@ -1532,10 +1533,10 @@ private fun ConnectedButtonGroup(
                         Color.Transparent
                     },
                     animationSpec = tween(
-                        durationMillis = 200,
+                        durationMillis = 250,
                         easing = FastOutSlowInEasing
                     ),
-                    label = "button_container_$value"
+                    label = "container_$value"
                 )
                 
                 val contentColor by animateColorAsState(
@@ -1545,41 +1546,30 @@ private fun ConnectedButtonGroup(
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                     animationSpec = tween(
-                        durationMillis = 200,
+                        durationMillis = 250,
                         easing = FastOutSlowInEasing
                     ),
-                    label = "button_content_$value"
+                    label = "content_$value"
                 )
                 
-                Button(
+                // Use Surface instead of Button to avoid internal Button animations
+                Surface(
                     onClick = { onOptionSelected(value) },
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp), // Standard Material 3 height
-                    shape = RoundedCornerShape(16.dp), // Individual button rounding
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = containerColor,
-                        contentColor = contentColor
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = if (isSelected) 2.dp else 0.dp,
-                        pressedElevation = if (isSelected) 4.dp else 1.dp
-                    ),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        .height(40.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = containerColor,
+                    contentColor = contentColor,
+                    tonalElevation = if (isSelected) 2.dp else 0.dp
                 ) {
-                    // Use Crossfade for ultra-smooth transitions
-                    Crossfade(
-                        targetState = Pair(label, isSelected),
-                        animationSpec = tween(
-                            durationMillis = 200,
-                            easing = FastOutSlowInEasing
-                        ),
-                        label = "button_text_$value"
-                    ) { (text, selected) ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = text,
+                            text = label,
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                             maxLines = 1
                         )
                     }
