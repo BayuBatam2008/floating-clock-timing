@@ -174,7 +174,6 @@ fun FloatingClockApp(
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
     val overlayState by viewModel.overlayState.collectAsStateWithLifecycle()
     
-    // EventViewModel for managing events
     val eventViewModel: EventViewModel = viewModel(
         factory = EventViewModel.Factory(
             (LocalContext.current.applicationContext as com.floatingclock.timing.FloatingClockApplication).eventRepository
@@ -184,11 +183,9 @@ fun FloatingClockApp(
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Clock) }
     val overlayActive = overlayState.isVisible || viewModel.isOverlayActive()
     
-    // Events state management
     var eventsSelectionMode by remember { mutableStateOf(false) }
     var eventsSelectedEvents by remember { mutableStateOf(setOf<String>()) }
     
-    // Track scroll states for FAB visibility
     val clockScrollState = rememberScrollState()
     val eventsScrollState = rememberScrollState()
     val syncScrollState = rememberScrollState()
@@ -201,22 +198,18 @@ fun FloatingClockApp(
         MainTab.Style -> styleScrollState
     }
     
-    // FAB visibility based on scroll with derivedStateOf for performance
     val fabExpanded by remember {
         derivedStateOf { currentScrollState.value <= 100 }
     }
     
-    // Material 3 expressive animation spec for FAB transitions
     val fabAnimationSpec: AnimationSpec<Float> = spring(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessMediumLow
     )
     
-    // Global SnackbarHost state
     val snackbarHostState = remember { SnackbarHostState() }
     val errorMessage by eventViewModel.errorMessage.collectAsState()
     
-    // Show snackbar when error message is available
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
             snackbarHostState.showSnackbar(
@@ -267,7 +260,6 @@ fun FloatingClockApp(
             }
         },
         floatingActionButton = {
-            // Wrap in Card to maintain proper shadow rendering during animations
             Card(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
@@ -295,10 +287,7 @@ fun FloatingClockApp(
                             overlayActive = overlayActive,
                             hasOverlayPermission = hasOverlayPermission,
                             onRequestOverlayPermission = onRequestOverlayPermission,
-                            onStartOverlay = {
-                                // Only enter PiP mode, don't start overlay service
-                                onEnterPip()
-                            },
+                            onStartOverlay = { onEnterPip() },
                             onStopOverlay = viewModel::hideOverlay,
                             expanded = fabExpanded
                         )
@@ -403,7 +392,6 @@ fun FloatingClockApp(
         }
     }
     
-    // EventEditModal for quick add functionality - only show when on Clock tab
     val showEventDialog by eventViewModel.showEventDialog.collectAsState()
     if (showEventDialog && selectedTab == MainTab.Clock) {
         EventEditModal(
@@ -429,7 +417,6 @@ private fun ClockFab(
     onStopOverlay: () -> Unit,
     expanded: Boolean = true
 ) {
-    // Material 3 expressive color animations
     val containerColor by animateColorAsState(
         targetValue = if (overlayActive) {
             MaterialTheme.colorScheme.errorContainer
@@ -525,7 +512,6 @@ private fun EventsFab(
     expanded: Boolean = true
 ) {
     if (isSelectionMode && selectedCount > 0) {
-        // Delete FAB in selection mode
         ExtendedFloatingActionButton(
             text = {
                 Text(text = "Delete ($selectedCount)")
@@ -542,7 +528,6 @@ private fun EventsFab(
             expanded = expanded
         )
     } else if (!isSelectionMode) {
-        // Add Event FAB in normal mode
         ExtendedFloatingActionButton(
             text = {
                 Text(text = "Add Event")
@@ -576,12 +561,11 @@ private fun ClockTab(
         mutableLongStateOf(timeState.baseNetworkTimeMillis)
     }
     
-    // Optimized time update with less frequent updates
     LaunchedEffect(timeState.baseNetworkTimeMillis, timeState.baseElapsedRealtimeMillis) {
         while (true) {
             currentMillis = timeState.baseNetworkTimeMillis +
                 (SystemClock.elapsedRealtime() - timeState.baseElapsedRealtimeMillis)
-            delay(10L) // Reduced from 16L for smoother updates
+            delay(10L)
         }
     }
     val currentInstant = Instant.ofEpochMilli(currentMillis)
@@ -629,7 +613,6 @@ private fun SyncedTimeCard(
     currentInstant: Instant,
     timeState: TimeSyncState
 ) {
-    // Optimize formatting to prevent excessive recomposition
     val formattedTime = remember(currentInstant.epochSecond, currentInstant.toEpochMilli() / 10) { 
         DateTimeFormatters.formatFullSyncTime(currentInstant.toEpochMilli())
     }
@@ -645,7 +628,6 @@ private fun SyncedTimeCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            // Remove AnimatedContent to reduce flickering
             Text(
                 text = formattedTime,
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium)
@@ -718,7 +700,6 @@ private fun InteractiveTimeDisplay(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Hours segment (0)
         InteractiveTimeSegment(
             value = "%02d".format(hours),
             label = "h",
@@ -726,7 +707,6 @@ private fun InteractiveTimeDisplay(
             onClick = { onSegmentClick(0) }
         )
         
-        // Minutes segment (1)
         InteractiveTimeSegment(
             value = "%02d".format(minutes),
             label = "m",
@@ -734,7 +714,6 @@ private fun InteractiveTimeDisplay(
             onClick = { onSegmentClick(1) }
         )
         
-        // Seconds segment (2)
         InteractiveTimeSegment(
             value = "%02d".format(seconds),
             label = "s",
@@ -742,7 +721,6 @@ private fun InteractiveTimeDisplay(
             onClick = { onSegmentClick(2) }
         )
         
-        // Milliseconds segment (3)
         InteractiveTimeSegment(
             value = "%03d".format(millis),
             label = "ms",
@@ -886,7 +864,6 @@ private fun InteractiveKeypad(
     onSecondsChange: (Int) -> Unit,
     onMillisChange: (Int) -> Unit
 ) {
-    // State for editing the current segment as string for easier input handling
     var editingValue by rememberSaveable(selectedSegment) { 
         mutableStateOf(
             when (selectedSegment) {
@@ -899,7 +876,6 @@ private fun InteractiveKeypad(
         )
     }
 
-    // Update editing value when selected segment changes
     LaunchedEffect(selectedSegment, hours, minutes, seconds, millis) {
         editingValue = when (selectedSegment) {
             0 -> hours.toString()
@@ -910,7 +886,6 @@ private fun InteractiveKeypad(
         }
     }
 
-    // Function to handle value input for the selected segment
     fun updateSelectedSegment(newValue: String) {
         editingValue = newValue
         val intValue = newValue.toIntOrNull() ?: 0
@@ -923,7 +898,6 @@ private fun InteractiveKeypad(
         }
     }
 
-    // Optimized keypad with remember for static data
     val keypadRows = remember {
         listOf(
             listOf("1", "2", "3"),
@@ -954,7 +928,6 @@ private fun InteractiveKeypad(
                                             }
                                         }
                                         "Reset" -> {
-                                            // Clear all time input values
                                             onHoursChange(0)
                                             onMinutesChange(0)
                                             onSecondsChange(0)
@@ -963,19 +936,18 @@ private fun InteractiveKeypad(
                                         }
                                         else -> {
                                             val maxLength = when (selectedSegment) {
-                                                0, 1, 2 -> 2  // Hours, minutes, seconds: max 2 digits
-                                                3 -> 3        // Milliseconds: max 3 digits
+                                                0, 1, 2 -> 2
+                                                3 -> 3
                                                 else -> 2
                                             }
                                             
                                             val maxValue = when (selectedSegment) {
-                                                0 -> 23  // Hours: 0-23
-                                                1, 2 -> 59  // Minutes, seconds: 0-59
-                                                3 -> 999  // Milliseconds: 0-999
+                                                0 -> 23
+                                                1, 2 -> 59
+                                                3 -> 999
                                                 else -> 23
                                             }
                                             
-                                            // Build new value
                                             val newValue = if (editingValue == "0") {
                                                 key
                                             } else {
@@ -984,7 +956,7 @@ private fun InteractiveKeypad(
                                                 if (candidateInt <= maxValue) {
                                                     candidate
                                                 } else {
-                                                    editingValue // Keep old value if exceeds max
+                                                    editingValue
                                                 }
                                             }
                                             
@@ -1042,14 +1014,12 @@ private fun SyncTab(
     timeState: TimeSyncState,
     userPreferences: UserPreferences
 ) {
-    // Remove local formatter, use centralized utility
     var customServer by rememberSaveable { mutableStateOf("") }
     var sliderValue by remember(userPreferences.syncIntervalMinutes) {
         mutableFloatStateOf(userPreferences.syncIntervalMinutes.toFloat())
     }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Last Sync Status Card (similar to SyncedTimeCard)
         Card(shape = MaterialTheme.shapes.large) {
             Column(
                 modifier = Modifier
@@ -1204,15 +1174,25 @@ private fun SyncTab(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { viewModel.selectServer(server) }
                                     .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = server, modifier = Modifier.weight(1f))
-                                RadioButton(
-                                    selected = userPreferences.selectedServer == server,
-                                    onClick = { viewModel.selectServer(server) }
+                                Text(
+                                    text = server,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
+                                IconButton(
+                                    onClick = { viewModel.removeCustomServer(server) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = stringResource(id = R.string.remove),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
                     }
@@ -1279,7 +1259,6 @@ private fun SyncTab(
             }
         }
         
-        // Add space at bottom to prevent FAB from blocking interactive elements
         Spacer(modifier = Modifier.height(80.dp))
     }
 }
@@ -1292,12 +1271,11 @@ private fun CustomizationTab(
     overlayState: FloatingOverlayUiState,
     style: FloatingClockStyle
 ) {
-    // Add smooth time updates for preview with optimized frame rate
     var currentMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
             currentMillis = System.currentTimeMillis()
-            delay(16L) // 60 FPS - balanced smooth update without excessive recomposition
+            delay(16L)
         }
     }
     
@@ -1318,7 +1296,6 @@ private fun CustomizationTab(
                     }
                 )
                 
-                // Divider between Font Scale and Show Millisecond
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
                 SettingSwitchRow(
@@ -1327,17 +1304,14 @@ private fun CustomizationTab(
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showMillis = enabled) } }
                 )
                 
-                // Divider between Font & Progress groups
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
-                // Progress Indicator Group
                 SettingSwitchRow(
                     title = "Enable Progress Indicator",
                     checked = style.showProgressIndicator,
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(showProgressIndicator = enabled) } }
                 )
                 
-                // Progress Activation Timing (only show if progress indicator is enabled)
                 AnimatedVisibility(
                     visible = style.showProgressIndicator,
                     enter = fadeIn(
@@ -1377,17 +1351,14 @@ private fun CustomizationTab(
                     }
                 }
                 
-                // Divider between Progress & Pulsing groups
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
-                // Pulsing Group
                 SettingSwitchRow(
                     title = "Enable Pulsing",
                     checked = style.enablePulsing,
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(enablePulsing = enabled) } }
                 )
                 
-                // Pulsing Speed (only show if pulsing is enabled)
                 AnimatedVisibility(
                     visible = style.enablePulsing,
                     enter = fadeIn(
@@ -1422,17 +1393,14 @@ private fun CustomizationTab(
                     }
                 }
                 
-                // Divider between Pulsing & Sound Trigger groups
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
-                // Sound Trigger Group
                 SettingSwitchRow(
                     title = "Enable Sound Trigger",
                     checked = style.enableSoundTrigger,
                     onCheckedChange = { enabled -> viewModel.updateStyle { it.copy(enableSoundTrigger = enabled) } }
                 )
                 
-                // Sound Count Mode (only show if sound trigger is enabled)
                 AnimatedVisibility(
                     visible = style.enableSoundTrigger,
                     enter = fadeIn(
@@ -1472,10 +1440,8 @@ private fun CustomizationTab(
                     }
                 }
                 
-                // Divider between Sound Trigger & Line 2 Display groups
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
-                // Line 2 Display Group
                 Text(text = "Line 2 Display", style = MaterialTheme.typography.titleSmall)
                 ConnectedButtonGroup(
                     selectedOption = style.line2DisplayMode,
@@ -1491,7 +1457,6 @@ private fun CustomizationTab(
         }
 
         Text(text = stringResource(id = R.string.live_preview), style = MaterialTheme.typography.titleMedium)
-        // Use the same layout as PictureInPictureFloatingClock for consistency
         LivePreviewClock(
             viewModel = viewModel,
             currentMillis = currentMillis
@@ -1507,9 +1472,8 @@ private fun ConnectedButtonGroup(
     onOptionSelected: (String) -> Unit,
     options: List<Pair<String, String>>
 ) {
-    // Material 3 expressive connected button group
     Card(
-        shape = RoundedCornerShape(20.dp), // More rounded for Material 3
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
@@ -1519,13 +1483,12 @@ private fun ConnectedButtonGroup(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp), // Padding inside container
-            horizontalArrangement = Arrangement.spacedBy(2.dp) // Small gap between buttons
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             options.forEach { (value, label) ->
                 val isSelected = selectedOption == value
                 
-                // Animate button colors - ONLY colors, nothing else
                 val containerColor by animateColorAsState(
                     targetValue = if (isSelected) {
                         MaterialTheme.colorScheme.primary
@@ -1552,7 +1515,6 @@ private fun ConnectedButtonGroup(
                     label = "content_$value"
                 )
                 
-                // Use Surface instead of Button to avoid internal Button animations
                 Surface(
                     onClick = { onOptionSelected(value) },
                     modifier = Modifier
@@ -1599,7 +1561,6 @@ private fun PulsingSpeedSelector(
         speedOptions.forEach { (speed, label) ->
             val isSelected = selectedSpeed == speed
             
-            // Animate container color with fast Material 3 timing
             val containerColor by animateColorAsState(
                 targetValue = if (isSelected) 
                     MaterialTheme.colorScheme.primaryContainer 
@@ -1629,11 +1590,9 @@ private fun PulsingSpeedSlider(
     value: Int,
     onValueChange: (Int) -> Unit
 ) {
-    // Map slider values (1-5) to actual milliseconds
     val speedValues = listOf(300, 500, 700, 900, 1200)
     val speedLabels = listOf("Very Fast", "Fast", "Medium", "Slow", "Very Slow")
     
-    // Convert current value to slider position (1-5)
     val currentPosition = speedValues.indexOfFirst { it == value }.takeIf { it >= 0 } ?: 1
     val currentLabel = speedLabels.getOrNull(currentPosition) ?: "Medium"
     
@@ -1673,7 +1632,6 @@ private fun AutoSyncIntervalSlider(
         val fraction = currentIndex.toFloat() / (steps.size - 1).coerceAtLeast(1)
         val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
         
-        // Animate offset with responsive spring
         val animatedOffsetPx by animateFloatAsState(
             targetValue = targetOffsetPx.toFloat(),
             animationSpec = spring(
@@ -1721,7 +1679,6 @@ private fun SettingSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    // Animate scale for clear visual feedback
     val scale by animateFloatAsState(
         targetValue = if (checked) 1.05f else 1f,
         animationSpec = spring(
@@ -1779,7 +1736,6 @@ private fun ValueIndicatorSlider(
         }
         val targetOffsetPx = ((constraints.maxWidth - indicatorWidthPx).coerceAtLeast(0f) * fraction).roundToInt()
         
-        // Animate offset with responsive spring
         val animatedOffsetPx by animateFloatAsState(
             targetValue = targetOffsetPx.toFloat(),
             animationSpec = spring(
@@ -1789,7 +1745,6 @@ private fun ValueIndicatorSlider(
             label = "value_indicator_offset"
         )
 
-        // Show the value indicator
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -1869,8 +1824,6 @@ private fun LivePreviewClock(
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
     val scheduledEventTime = overlayState.eventTimeMillis
     
-    // Use centralized time formatting utilities with optimized updates
-    // Only update on second changes for date, and 100ms for time with millis
     val currentTime = remember(currentMillis / if (userPreferences.floatingClockStyle.showMillis) 100 else 1000) {
         DateTimeFormatters.formatTime(
             currentMillis,
@@ -1879,7 +1832,7 @@ private fun LivePreviewClock(
         )
     }
     
-    val currentDate = remember(currentMillis / 60000) { // Update every minute
+    val currentDate = remember(currentMillis / 60000) {
         DateTimeFormatters.formatDate(currentMillis)
     }    // Format target time with milliseconds if scheduled event exists
     val targetTime = remember(scheduledEventTime) {
@@ -1888,7 +1841,6 @@ private fun LivePreviewClock(
         }
     }
     
-    // Calculate progress info
     val progressInfo = remember(scheduledEventTime, currentMillis) {
         if (scheduledEventTime != null) {
             val timeDifference = scheduledEventTime - currentMillis
@@ -1909,7 +1861,6 @@ private fun LivePreviewClock(
         }
     }
     
-    // Use Material3 color scheme (always dynamic)
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryAccentColor = MaterialTheme.colorScheme.secondary
     val surfaceColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp).copy(alpha = 0.95f)
@@ -1928,14 +1879,12 @@ private fun LivePreviewClock(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Start
         ) {
-            // Line 1: Time - using centralized UI component
             UIComponents.TimeText(
                 text = currentTime,
                 color = primaryColor,
                 fontScale = userPreferences.floatingClockStyle.fontScale
             )
             
-            // Line 2: Based on display mode selection - using centralized UI component
             UIComponents.Line2Content(
                 displayMode = userPreferences.floatingClockStyle.getLine2DisplayMode(),
                 currentDate = currentDate,
@@ -1945,7 +1894,6 @@ private fun LivePreviewClock(
                 fontScale = userPreferences.floatingClockStyle.fontScale
             )
             
-            // Line 3: Progress Indicator (if target time is set)
             targetTime?.let {
                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(

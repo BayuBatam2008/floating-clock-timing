@@ -114,12 +114,10 @@ class MainActivity : ComponentActivity() {
                             Lifecycle.Event.ON_RESUME -> {
                                 hasOverlayPermission = Settings.canDrawOverlays(context)
                                 isPiPModeState.value = isInPictureInPictureMode
-                                // Re-sync time when resuming from background to ensure accuracy
                                 android.util.Log.d("MainActivity", "App resumed - triggering time sync")
                                 viewModel.syncNow()
                             }
                             Lifecycle.Event.ON_START -> {
-                                // Also sync when the app becomes visible
                                 android.util.Log.d("MainActivity", "App started - checking time accuracy")
                                 viewModel.syncNow()
                             }
@@ -262,7 +260,6 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     
     var progressInfo by remember { mutableStateOf(ProgressInfo(0f, false)) }
     
-    // Sound trigger state
     var soundTriggered by remember { mutableStateOf(false) }
     var lastEventTime by remember { mutableLongStateOf(0L) }
     
@@ -281,7 +278,6 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
     val userPreferences by viewModel.userPreferences.collectAsState()
     val scheduledEventTime = overlayState.eventTimeMillis
     
-    // Reset sound trigger when event changes
     LaunchedEffect(scheduledEventTime) {
         if (scheduledEventTime != lastEventTime) {
             soundTriggered = false
@@ -353,7 +349,6 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                     else -> ProgressInfo(0f, false)
                 }
                 
-                // Sound trigger logic
                 if (userPreferences.floatingClockStyle.enableSoundTrigger && !soundTriggered) {
                     val countMode = when (userPreferences.floatingClockStyle.soundCountMode) {
                         3 -> SoundManager.CountMode.THREE
@@ -363,7 +358,6 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                     }
                     val triggerWindowMs = (countMode.prepSeconds + 3) * 1000L
                     
-                    // Trigger sound when within countdown window and approaching target time
                     if (timeDifference in 0..triggerWindowMs) {
                         soundTriggered = true
                         soundManager?.startCountdown(timeDifference, countMode)
@@ -375,7 +369,6 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                 lastTimeDifference = Long.MAX_VALUE
             }
             
-            // Optimized delay for 60 FPS (16ms) - balanced smooth animation with battery efficiency
             delay(16)
         }
     }

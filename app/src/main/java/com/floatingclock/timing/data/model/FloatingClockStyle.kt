@@ -14,12 +14,12 @@ data class FloatingClockStyle(
     val fontScale: Float = 1f,
     val showMillis: Boolean = true,
     val showProgressIndicator: Boolean = true,
-    val progressActivationSeconds: Int = 5,
+    val progressActivationSeconds: Int = 0,
     val enablePulsing: Boolean = true,
     val pulsingSpeedMs: Int = 500,
     val line2DisplayMode: String = Line2DisplayMode.DATE_ONLY.name,
-    val enableSoundTrigger: Boolean = false,
-    val soundCountMode: Int = 3 // 3, 5, or 10 count
+    val enableSoundTrigger: Boolean = true,
+    val soundCountMode: Int = 5
 ) {
     fun getLine2DisplayMode(): Line2DisplayMode = try {
         Line2DisplayMode.valueOf(line2DisplayMode)
