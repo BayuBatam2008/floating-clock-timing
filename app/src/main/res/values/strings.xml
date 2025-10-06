@@ -40,4 +40,5 @@
     <string name="last_success">Last success</string>
     <string name="invalid_time_format">Enter a duration greater than zero</string>
     <string name="scheduled_time">Scheduled: %1$s</string>
+    <string name="attribution_countdown">Event countdown sounds</string>
 </resources>

@@ -96,6 +96,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
+        // Initialize SoundManager
+        soundManager = SoundManager(this)
+        android.util.Log.i("MainActivity", "✅ SoundManager initialized")
+        
         eventNotificationManager = EventNotificationManager(this)
         requestAllNotificationPermissions()
         setupEfficientEventNotifications()
@@ -356,9 +360,15 @@ fun PictureInPictureFloatingClock(viewModel: MainViewModel) {
                         10 -> SoundManager.CountMode.TEN
                         else -> SoundManager.CountMode.THREE
                     }
-                    val triggerWindowMs = (countMode.prepSeconds + 3) * 1000L
+                    // Trigger window is the countdown duration (3, 5, or 10 seconds)
+                    val triggerWindowMs = countMode.countFrom * 1000L
                     
                     if (timeDifference in 0..triggerWindowMs) {
+                        android.util.Log.i("MainActivity", "🎵 TRIGGERING SOUND!")
+                        android.util.Log.i("MainActivity", "   Time difference: ${timeDifference}ms")
+                        android.util.Log.i("MainActivity", "   Count mode: $countMode (countdown from ${countMode.countFrom})")
+                        android.util.Log.i("MainActivity", "   SoundManager: ${if (soundManager != null) "Available" else "NULL!"}")
+                        
                         soundTriggered = true
                         soundManager?.startCountdown(timeDifference, countMode)
                     }
